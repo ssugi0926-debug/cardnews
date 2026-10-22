@@ -282,12 +282,12 @@ a{color:var(--accent)}
         <div class="grid2">
           <div><label class="lbl" for="reelMotion">배경 움직임</label>
             <select id="reelMotion"><option value="zoom">천천히 확대</option><option value="pan">옆으로 흐르기</option><option value="mix">확대 + 흐르기</option></select></div>
-          <div><label class="lbl" for="reelAnim">제목 등장 방식</label>
+          <div id="reelAnimBox"><label class="lbl" for="reelAnim" id="reelAnimLbl">제목 등장 방식</label>
             <select id="reelAnim"><option value="type">타이핑 (한 글자씩)</option><option value="slide">한 줄씩 올라오기</option></select></div>
-          <div><label class="lbl" for="reelTitleSize">릴스 제목 크기 <span id="reelTitleSizeVal"></span></label><input type="range" id="reelTitleSize" min="56" max="150" step="2"></div>
-          <div><label class="lbl" for="reelSubSize">릴스 보조 문구 크기 <span id="reelSubSizeVal"></span></label><input type="range" id="reelSubSize" min="32" max="84" step="2"></div>
+          <div><label class="lbl" for="reelTitleSize"><span id="reelTitleSizeLbl">릴스 제목 크기</span> <span id="reelTitleSizeVal"></span></label><input type="range" id="reelTitleSize" min="56" max="150" step="2"></div>
+          <div><label class="lbl" for="reelSubSize"><span id="reelSubSizeLbl">릴스 보조 문구 크기</span> <span id="reelSubSizeVal"></span></label><input type="range" id="reelSubSize" min="32" max="84" step="2"></div>
           <div><label class="lbl" for="reelY">글자 높이 (위 ↔ 아래) <span id="reelYVal"></span></label><input type="range" id="reelY" min="-50" max="40" step="1"></div>
-          <div><label class="lbl" for="reelGap">제목과 보조 문구 간격 <span id="reelGapVal"></span></label><input type="range" id="reelGap" min="0" max="160" step="4"></div>
+          <div><label class="lbl" for="reelGap"><span id="reelGapLbl">제목과 보조 문구 간격</span> <span id="reelGapVal"></span></label><input type="range" id="reelGap" min="0" max="160" step="4"></div>
           <div><label class="lbl" for="reelFx">글자 그림자</label>
             <select id="reelFx"><option value="soft">은은한 그림자</option><option value="strong">진한 그림자</option><option value="outline">테두리</option><option value="box">반투명 바탕</option><option value="none">없음</option></select></div>
           <div><label class="lbl" for="reelFxStr">그림자 진하기 <span id="reelFxStrVal"></span></label><input type="range" id="reelFxStr" min="0" max="100" step="5"></div>
@@ -1009,7 +1009,8 @@ $('#moreTitles').onclick = async () => {
 // ---------- reels ----------
 const RW = 1080, RH = 1920;
 const reelCv = $('#reelCv'), rctx = reelCv.getContext('2d');
-const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodSize:56, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
+const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodSize:76, moodSubSize:40, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
+if (reel.moodSize === 56 && !store.get('reel', {}).moodSubSize) reel.moodSize = 76;
 const plainT = t => String(t || '').replace(/[\[\]［］【】〔〕]/g, '').replace(/\s*\n\s*/g, ' ').trim();
 function narrOf(x){ if (x.narr != null) return x.narr; const end = t => /[.?!。？！]$/.test(t) ? t : t + '.'; return [plainT(x.title), plainT(x.sub)].filter(Boolean).map(end).join(' '); }
 function listOf(c){
@@ -1351,7 +1352,7 @@ function renderListEditor(el, c){
       const ci = document.createElement('input'); ci.type = 'text'; ci.id = 'listClosing'; ci.value = L.closing.text || ''; ci.placeholder = '예: 오늘 하나만 해보세요';
       ci.addEventListener('input', () => { L.closing.text = ci.value; persist(); if (!playing){ showStill(); } });
       row.append(lab, ci, narrRowEl(L.closing, k, L.closing.text, ''), imgRowEl(L.closing, k, L.closing.text || c.title)); el.append(row); }
-    if (reel.durMode === 'narr'){
+    if (true){
       const nRow = document.createElement('div'); nRow.className = 'row';
       const nb = document.createElement('button'); nb.className = 'small'; nb.type = 'button'; nb.textContent = '내레이션 대본 복사 (브루용)';
       const ns = document.createElement('span'); ns.className = 'status';
@@ -1450,7 +1451,7 @@ function syncPickList(){
       const st = document.createElement('span'); st.className = 'status'; st.id = 'pkAIStatus';
       ai.onclick = () => fillSubsAI(st, ai);
       aiRow.append(ai, st); head.after(aiRow);
-      if (reel.durMode === 'narr'){
+      if (true){
         const nRow = document.createElement('div'); nRow.className = 'row';
         const nb = document.createElement('button'); nb.className = 'small'; nb.type = 'button'; nb.textContent = '내레이션 대본 복사 (브루용)';
         const ns = document.createElement('span'); ns.className = 'status';
@@ -1585,8 +1586,15 @@ function syncReelUI(){
   $('#durNarrRow').hidden = !narrMode; $('#durFixedRow').hidden = narrMode;
   $('#reelDur').value = reel.dur; $('#reelDurVal').textContent = reel.dur + '초';
   $('#reelMotion').value = reel.motion; $('#reelScope').value = reel.scope; $('#reelAnim').value = reel.anim;
-  $('#reelTitleSize').value = reel.titleSize; $('#reelTitleSizeVal').textContent = reel.titleSize + 'px';
-  $('#reelSubSize').value = reel.subSize; $('#reelSubSizeVal').textContent = reel.subSize + 'px';
+  const MO = reel.scope === 'mood';
+  $('#reelTitleSizeLbl').textContent = MO ? '감성 문장 크기' : '릴스 제목 크기';
+  $('#reelSubSizeLbl').textContent = MO ? '작은 두 번째 줄 크기' : '릴스 보조 문구 크기';
+  $('#reelGapLbl').textContent = MO ? '문장과 두 번째 줄 간격' : '제목과 보조 문구 간격';
+  $('#reelAnimBox').hidden = MO;
+  $('#reelTitleSize').min = MO ? 40 : 56; $('#reelSubSize').min = MO ? 24 : 32;
+  const tsz = MO ? (reel.moodSize || 76) : reel.titleSize, ssz = MO ? (reel.moodSubSize || 40) : reel.subSize;
+  $('#reelTitleSize').value = tsz; $('#reelTitleSizeVal').textContent = tsz + 'px';
+  $('#reelSubSize').value = ssz; $('#reelSubSizeVal').textContent = ssz + 'px';
   $('#reelY').value = Math.round((reel.offY || 0) * 100); $('#reelYVal').textContent = (reel.offY > 0 ? '+' : '') + Math.round((reel.offY || 0) * 100);
   $('#reelGap').value = reel.gap || 0; $('#reelGapVal').textContent = (reel.gap || 0) + 'px';
   $('#reelFx').value = reel.fx; $('#reelFxStr').value = reel.fxStr; $('#reelFxStrVal').textContent = reel.fxStr + '%'; $('#reelFxStr').disabled = reel.fx === 'none';
@@ -1605,7 +1613,7 @@ $('#reelPosReset').onclick = () => { reel.offX = 0; reel.offY = 0; reel.gap = 0;
   reelCv.addEventListener('pointermove', e => {
     if (!dr || playing) return;
     const r = reelCv.getBoundingClientRect();
-    reel.offX = Math.max(-0.06, Math.min(0.3, dr.ox + (e.clientX - dr.x) / r.width));
+    reel.offX = Math.max(reel.scope === 'mood' ? -0.3 : -0.06, Math.min(0.3, dr.ox + (e.clientX - dr.x) / r.width));
     reel.offY = Math.max(-0.5, Math.min(0.4, dr.oy + (e.clientY - dr.y) / r.height));
     if (!rq){ rq = true; requestAnimationFrame(() => { rq = false; syncReelUI(); showStill(); }); }
   });
@@ -1613,11 +1621,11 @@ $('#reelPosReset').onclick = () => { reel.offX = 0; reel.offY = 0; reel.gap = 0;
   reelCv.addEventListener('pointerup', end); reelCv.addEventListener('pointercancel', end);
 })();
 $('#reelAnim').addEventListener('change', e => { reel.anim = e.target.value; saveReel(); if (!playing) showStill(); });
-$('#reelTitleSize').addEventListener('input', e => { reel.titleSize = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
-$('#reelSubSize').addEventListener('input', e => { reel.subSize = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelTitleSize').addEventListener('input', e => { if (reel.scope === 'mood') reel.moodSize = Number(e.target.value); else reel.titleSize = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelSubSize').addEventListener('input', e => { if (reel.scope === 'mood') reel.moodSubSize = Number(e.target.value); else reel.subSize = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
 $('#reelDur').addEventListener('input', e => { reel.dur = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
 $('#reelMotion').addEventListener('change', e => { reel.motion = e.target.value; saveReel(); if (!playing) showStill(); });
-$('#reelScope').addEventListener('change', e => { reel.scope = e.target.value; saveReel(); if (!playing) showStill(); });
+$('#reelScope').addEventListener('change', e => { reel.scope = e.target.value; saveReel(); syncReelUI(); if (!playing) showStill(); });
 $('#bgmVol').addEventListener('input', e => { reel.vol = Number(e.target.value); saveReel(); syncReelUI(); if (playing && playing.gain) playing.gain.gain.value = reel.vol; });
 $('#bgmPick').onclick = () => $('#bgmFile').click();
 $('#bgmFile').addEventListener('change', e => {
@@ -1853,22 +1861,32 @@ function drawMood(g, sc, t, D){
     g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 12; g.fillText(series, RW / 2, RH * 0.11); setLS(g, 0); g.restore();
   }
   // the line
-  const fs = reel.moodSize || 56, lh = fs * 1.6;
+  const fs = reel.moodSize || 76, sfs = reel.moodSubSize || 40, lh = fs * 1.55;
+  const cx = RW / 2 + (reel.offX || 0) * RW, maxW = RW * 0.84;
   g.font = moodSpec(fs); setLS(g, 2);
-  const lines = layout(g, plainT(sc.title || '').replace(/ \/ /g, '\n'), RW * 0.78);
-  const blockH = lines.length * lh;
-  const top = reel.moodPos === 'lower' ? RH * 0.68 - blockH / 2 : RH * 0.5 - blockH / 2 + (reel.offY || 0) * RH;
+  const lines = layout(g, plainT(sc.title || '').replace(/ \/ /g, '\n'), maxW);
+  const hasSub = !!(sc.sub && sc.sub.trim()), subGap = sfs * 0.8 + (reel.gap || 0);
+  const blockH = lines.length * lh + (hasSub ? subGap + sfs * 1.3 : 0);
+  const top = (reel.moodPos === 'lower' ? RH * 0.68 : RH * 0.5) - blockH / 2 + (reel.offY || 0) * RH;
   const a = easeOut((t - 0.5) / 1.4);
-  g.globalAlpha = a; g.textAlign = 'center'; g.textBaseline = 'top';
-  g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = fs * 0.35; g.shadowOffsetY = 2;
-  g.fillStyle = '#FFFFFF';
-  lines.forEach((ln, li) => g.fillText(strOf(ln), RW / 2, top + li * lh + (1 - a) * 18));
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  if (reel.fx === 'box'){
+    let wMax = 0; lines.forEach(ln => { wMax = Math.max(wMax, g.measureText(strOf(ln)).width); });
+    const pad = fs * 0.5, k = (reel.fxStr == null ? 60 : reel.fxStr) / 100;
+    g.globalAlpha = a; g.fillStyle = `rgba(0,0,0,${0.25 + 0.4 * k})`; rr(g, cx - wMax / 2 - pad, top - pad * 0.7, wMax + pad * 2, blockH + pad * 1.2, fs * 0.25); g.fill();
+  }
+  g.globalAlpha = a; g.fillStyle = '#FFFFFF';
+  const MFX = {fx:reel.fx === 'box' ? 'soft' : reel.fx, fxStr:reel.fxStr};
+  fxSet(g, c, fs, MFX);
+  lines.forEach((ln, li) => fxText(g, c, strOf(ln), cx, top + li * lh + (1 - a) * 18, fs, MFX));
   setLS(g, 0);
   // sub line (optional, smaller)
-  if (sc.sub && sc.sub.trim()){
-    const a2 = easeOut((t - 1.4) / 1.2); g.globalAlpha = a2 * 0.85;
-    g.font = moodSpec(Math.round(fs * 0.55)); g.fillText(plainT(sc.sub), RW / 2, top + blockH + fs * 0.4);
+  if (hasSub){
+    const a2 = easeOut((t - 1.4) / 1.2); g.globalAlpha = a2 * 0.88;
+    g.font = moodSpec(sfs); fxSet(g, c, sfs, MFX);
+    fxText(g, c, plainT(sc.sub), cx, top + lines.length * lh + subGap - lh + fs * 1.3, sfs, MFX);
   }
+  g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowOffsetY = 0;
   // ending: account
   if (sc.end && c.handle.trim()){
     const a3 = easeOut((t - Math.max(1.6, D - 2.2)) / 0.8); g.globalAlpha = a3 * 0.85;
@@ -1891,9 +1909,7 @@ function renderMoodEditor(el, c){
     fsel.onchange = () => { reel.moodFont = fsel.value; saveReel(); ensureFonts(); if (!playing) showStill(); };
     const pos = document.createElement('select'); pos.id = 'moodPos'; [['center','가운데'],['lower','아래쪽']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; pos.append(o); }); pos.value = reel.moodPos || 'center';
     pos.onchange = () => { reel.moodPos = pos.value; saveReel(); if (!playing) showStill(); };
-    const sz = document.createElement('input'); sz.type = 'range'; sz.id = 'moodSize'; sz.min = 36; sz.max = 90; sz.step = 2; sz.value = reel.moodSize || 56;
-    sz.oninput = () => { reel.moodSize = Number(sz.value); saveReel(); if (!playing) showStill(); };
-    g2.append(mk('시리즈 이름 (위쪽 작은 글씨)', si, 'moodSeries'), mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'), mk('문장 크기', sz, 'moodSize'));
+    g2.append(mk('시리즈 이름 (위쪽 작은 글씨)', si, 'moodSeries'), mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'));
     el.append(g2);
     const opt = document.createElement('div'); opt.className = 'row';
     const snd = document.createElement('label'); snd.className = 'check'; const sc1 = document.createElement('input'); sc1.type = 'checkbox'; sc1.id = 'moodSound'; sc1.checked = !!reel.moodSound;
@@ -1926,6 +1942,13 @@ function renderMoodEditor(el, c){
     const add = document.createElement('button'); add.type = 'button'; add.className = 'small'; add.textContent = '+ 장면 직접 추가';
     add.onclick = () => { M.lines.push({text:'', sub:''}); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); };
     el.append(add);
+    if (M.lines.length){
+      const nRow = document.createElement('div'); nRow.className = 'row';
+      const nb = document.createElement('button'); nb.className = 'small'; nb.type = 'button'; nb.id = 'moodNarrCopy'; nb.textContent = '내레이션 대본 복사 (브루용)';
+      const ns = document.createElement('span'); ns.className = 'status';
+      nb.onclick = () => copyNarration(ns);
+      nRow.append(nb, ns); aiRow.after(nRow);
+    }
   }
   head.textContent = `장면 ${reelScenes.length}개 · 총 ${reelTotal()}초 · 감성형` + (M.lines.length ? '' : ' (문장을 쓰거나 "AI로 감성 문장 쓰기"를 눌러주세요)');
   refreshSecs();
