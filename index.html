@@ -1,0 +1,2232 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>카드뉴스 스튜디오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&family=M+PLUS+Rounded+1c:wght@800&family=Zen+Maru+Gothic:wght@700&family=Dela+Gothic+One&family=Noto+Serif+JP:wght@400;900&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gowun+Batang:wght@400;700&family=Nanum+Myeongjo:wght@400;800&family=Nanum+Pen+Script&family=Gaegu:wght@700&family=Sunflower:wght@700&family=Gothic+A1:wght@900&family=Noto+Sans+KR:wght@300;500;700;900&family=Noto+Serif+KR:wght@400;900&family=Hahmlet:wght@800&family=Song+Myung&family=Gugi&family=Dokdo&family=Yeon+Sung&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 작업대 레이아웃: 위에 카드 1·2·3 탭, 왼쪽은 기사→제목→본문 흐름, 오른쪽은 1080×1350 미리보기와 편집 도구 */
+:root{
+  --bg:#F1F2F5; --surface:#FFFFFF; --ink:#161922; --muted:#5D6371; --line:#D9DCE3;
+  --accent:#2E54D1; --accent-ink:#FFFFFF; --chip:#ECF0FB; --hi:#FFE27A; --danger:#B3402A; --ok:#1F8A4C; --warn:#B7791F;
+  --f-ui:"IBM Plex Sans KR","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --f-display:"Black Han Sans","Malgun Gothic",system-ui,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0F1117; --surface:#181B23; --ink:#E8EAF0; --muted:#99A0AE; --line:#2B2F3A;
+  --accent:#829DFF; --accent-ink:#0D1120; --chip:#1F2539; --hi:#5A4A12; --danger:#FF8A70; --ok:#5BD08B; --warn:#F2B05E; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.55;padding:20px max(16px,env(safe-area-inset-right)) 60px max(16px,env(safe-area-inset-left))}
+.wrap{max-width:1200px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:14px}
+header.top h1{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0}
+header.top p{margin:0;color:var(--muted);font-size:14px;flex:1;min-width:200px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;padding:11px 20px}
+button.small{padding:5px 10px;font-size:13px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text],input[type=url],input[type=password],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+textarea{resize:vertical}
+label.lbl{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.status{font-size:13px;color:var(--muted)}
+.status.err{color:var(--danger)}
+.status.ok{color:var(--ok)}
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.panel h2{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:8px}
+.step{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em}
+
+/* 설정 */
+#settings{margin-bottom:16px;border-color:var(--accent)}
+#settings .grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+#settings .span2{grid-column:span 2}
+@media (max-width:800px){#settings .grid3{grid-template-columns:1fr} #settings .span2{grid-column:auto}}
+.keyrow{display:flex;gap:8px}
+.keyrow input{flex:1}
+
+/* 카드 탭 */
+.tabsbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.ctab{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;min-width:150px;text-align:left}
+.ctab[aria-selected="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.ctab canvas{width:40px;height:50px;border-radius:4px;background:var(--line);display:block}
+.ctab .meta{display:flex;flex-direction:column;line-height:1.3}
+.ctab .meta b{font-size:14px}
+.ctab .meta span{font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);margin-right:5px;vertical-align:1px}
+.dot.done{background:var(--ok)} .dot.busy{background:var(--warn)} .dot.err{background:var(--danger)}
+.tabsbar .spacer{flex:1}
+
+.app{display:grid;gap:18px 28px;grid-template-columns:minmax(0,1fr) minmax(0,470px);
+  grid-template-areas:"input preview" "titles preview" "caption preview" "reels preview";grid-template-rows:auto auto auto 1fr}
+@media (max-width:940px){.app{grid-template-columns:minmax(0,1fr);grid-template-areas:"input" "titles" "preview" "caption" "reels";grid-template-rows:none}}
+.reel-wrap{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:560px){.reel-wrap{grid-template-columns:1fr}.reel-box{max-width:220px}}
+.reel-box{position:relative;width:100%;aspect-ratio:9/16;border-radius:8px;overflow:hidden;background:#111}
+#reelCv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#reelCv:active{cursor:grabbing}
+.reel-tip{font-size:12px;color:var(--muted);margin-top:6px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.reel-rec{position:absolute;top:8px;left:8px;background:#C8321E;color:#fff;font-size:12px;padding:2px 8px;border-radius:99px}
+.bgm-name{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.chips{display:flex;flex-direction:column;gap:8px}
+.chip{text-align:left;background:var(--bg);padding:10px 12px;font-size:15px;line-height:1.4;white-space:pre-line;display:flex;gap:10px}
+.chip .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:2px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--chip)}
+.chip mark{background:var(--hi);color:inherit;border-radius:3px;padding:0 2px}
+.chiprow{display:flex;gap:6px;align-items:stretch}
+.chiprow .chip{flex:1;min-width:0}
+.pick{flex:0 0 auto;width:74px;font-size:12px;padding:6px 4px;line-height:1.3;color:var(--muted);text-align:center}
+.pick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.picklist{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+.pk-row{display:flex;flex-direction:column;gap:4px}
+.pk-title{font-size:13px;font-weight:700;color:var(--ink)}
+.pk-row input{font-size:14px;padding:7px 10px}
+.pk-narr{font-size:13px;padding:6px 10px}
+.pk-row{border-top:1px solid var(--line);padding-top:10px}
+.pk-img{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.pk-thumb{width:36px;height:64px;border-radius:4px;background:var(--line) center/cover no-repeat;font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.pk-secs{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.pk-secs input{width:90px}
+.ja-box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
+.pk-ja{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:12px;border:1px dashed var(--line);border-radius:8px}
+.captabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.captabs button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.preview{grid-area:preview;align-self:start;position:sticky;top:12px}
+@media (max-width:940px){.preview{position:static}}
+.canvas-wrap{position:relative;width:100%;aspect-ratio:4/5;border-radius:6px;overflow:hidden;background:#222;box-shadow:0 6px 24px rgba(10,14,30,.18)}
+#cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.busy-veil{position:absolute;inset:0;background:rgba(10,12,20,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;text-align:center;padding:20px}
+.dim{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin:6px 2px 12px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=color]{width:100%;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:3px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;flex:1;padding:8px 6px;font-size:13px}
+.divider{height:1px;background:var(--line);margin:4px 0}
+.fontprev{font-size:22px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hidden-file{display:none}
+label.check{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:14px;cursor:pointer}
+label.check input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:9px 16px;border-radius:99px;font-size:14px;z-index:20;max-width:90vw}
+a{color:var(--accent)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>카드뉴스 스튜디오</h1>
+  <p>기사 3개를 넣으면 제미나이가 제목 · 배경 그림 · 인스타 본문까지 만들어요.</p>
+  <button id="toggleSettings">설정 · API 키</button>
+</header>
+
+<section class="panel" id="settings" hidden>
+  <h2>설정</h2>
+  <p class="hint">API 키는 이 컴퓨터의 브라우저에만 저장되고, 제미나이 서버로만 보내져요. 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (본계정으로 로그인)</p>
+  <div class="stack">
+    <div><label class="lbl" for="apiKey">제미나이 API 키</label>
+      <div class="keyrow"><input type="password" id="apiKey" placeholder="AIza로 시작하는 키 붙여넣기" autocomplete="off"><button id="showKey" class="small">보기</button></div></div>
+    <div class="grid3">
+      <div><label class="lbl" for="imgModel">그림 모델</label>
+        <select id="imgRes" style="margin-bottom:6px"><option value="2K">그림 고화질 (2K, 릴스에 선명)</option><option value="1K">그림 표준 (1K)</option></select>
+        <select id="imgModel">
+          <option value="gemini-3.1-flash-image">Nano Banana 2 (빠르고 저렴, 추천)</option>
+          <option value="gemini-nano-banana-2.1">Nano Banana 2.1 (최신)</option>
+          <option value="gemini-3-pro-image">Nano Banana Pro (고품질, 비쌈)</option>
+          <option value="gemini-3.1-flash-lite-image">Nano Banana 2 Lite (가장 저렴)</option>
+        </select></div>
+      <div><label class="lbl" for="textModel">글 모델</label><input type="text" id="textModel"></div>
+      <div><label class="lbl" for="defHandle">내 계정 표시</label><input type="text" id="defHandle" placeholder="@my_account"></div>
+    </div>
+    <div class="grid3">
+      <div><label class="lbl" for="tone">말투</label>
+        <select id="tone">
+          <option value="news">이슈·뉴스형 (짧고 강하게)</option>
+          <option value="senior">시니어 채널형 (따뜻한 존댓말, 쉬운 말)</option>
+          <option value="friendly">친구처럼 친근하게 (가벼운 존댓말)</option>
+          <option value="expert">전문가 해설형 (차분하고 신뢰감 있게)</option>
+          <option value="advice">인생 조언형 (인생 선배가 건네는 말)</option>
+          <option value="morning">아침 명상형 (조용하고 다정한 아침 인사)</option>
+        </select></div>
+      <div class="span2"><label class="lbl" for="extraRules">추가로 원하는 점 (자유롭게)</label>
+        <textarea id="extraRules" rows="2" placeholder="예: 60~70대가 읽기 쉽게. 어려운 한자어 대신 쉬운 말. 마지막에 '골방인생학개론 구독하고 더 알아보세요' 한 줄."></textarea></div>
+    </div>
+    <div class="row">
+      <button class="primary" id="saveSettings">저장</button>
+      <button id="testKey">키 테스트</button>
+      <span class="status" id="settingsStatus"></span>
+    </div>
+  </div>
+</section>
+
+<div class="tabsbar" role="tablist" id="tabsbar"></div>
+
+<main class="app">
+  <section class="panel" style="grid-area:input">
+    <h2><span class="step">STEP 1</span>글감 넣기</h2>
+    <div class="seg" id="modeSeg" style="margin:8px 0 10px"><button data-v="news">기사로 만들기</button><button data-v="topic">주제로 만들기 (인생 조언 등)</button></div>
+    <p class="hint" id="modeHint">링크만 넣어도 되고, 링크가 안 읽히면 본문을 붙여넣으세요. 본문이 있으면 본문을 우선 사용해요.</p>
+    <div class="stack">
+      <div id="urlRow"><label class="lbl" for="url">기사 링크</label><input type="url" id="url" placeholder="https://n.news.naver.com/..."></div>
+      <div><label class="lbl" for="article" id="articleLbl">기사 본문 (선택)</label><textarea id="article" rows="6" placeholder="기사 제목과 본문을 붙여넣기"></textarea></div>
+      <label class="check"><input type="checkbox" id="autoImg"> 만들 때 제미나이 그림도 자동으로 그리기 <span class="status">(끄면 그림 요금 없음)</span></label>
+      <div class="row">
+        <button class="primary" id="genBtn">이 카드 만들기</button>
+        <button id="clearCard">카드 비우기</button>
+      </div>
+      <div class="status" id="genStatus"></div>
+    </div>
+  </section>
+
+  <section class="panel" style="grid-area:titles">
+    <h2><span class="step">STEP 2</span>제목 고르기</h2>
+    <p class="hint">제목을 누르면 이미지에 들어가요. 오른쪽 <b>릴스에 넣기</b>를 누른 순서대로 릴스 장면이 돼요. [대괄호] 안 단어는 강조색이에요.</p>
+    <div class="chips" id="chips"></div>
+    <div class="row" style="margin-top:10px"><button class="small" id="moreTitles">제목 다시 뽑기</button><span class="status" id="titleStatus"></span></div>
+  </section>
+
+  <section class="panel preview" aria-label="미리보기와 편집">
+    <div class="canvas-wrap">
+      <canvas id="cv" width="1080" height="1350" aria-label="카드뉴스 미리보기"></canvas>
+      <div class="busy-veil" id="veil" hidden></div>
+    </div>
+    <div class="dim"><span>1080 × 1350 · 인스타 4:5</span><span>드래그해서 글자 위치 이동</span></div>
+    <div class="stack">
+      <div><label class="lbl" for="title">이미지 문구</label><textarea id="title" rows="2"></textarea></div>
+      <div class="grid2">
+        <div><label class="lbl" for="sub">보조 문구</label><input type="text" id="sub"></div>
+        <div><label class="lbl" for="tag">꼬리표</label><input type="text" id="tag"></div>
+      </div>
+      <div class="divider"></div>
+      <div><label class="lbl" for="font">제목 글꼴</label><select id="font"></select></div>
+      <div class="fontprev" id="fontPrev">오늘의 이슈, 한 장으로</div>
+      <div><label class="lbl" for="subFont">보조 문구 글꼴</label><select id="subFont"></select></div>
+      <div class="fontprev" id="subFontPrev" style="font-size:18px">제목 아래 들어가는 보조 문구예요</div>
+      <div class="row">
+        <button class="small" id="useLocalFont">내 컴퓨터 폰트 이름으로 쓰기</button>
+        <button class="small" id="uploadFont">폰트 파일 올리기</button>
+        <input type="file" id="fontFile" class="hidden-file" accept=".ttf,.otf,.woff,.woff2">
+      </div>
+      <div id="localFontRow" class="keyrow" hidden><input type="text" id="localFontName" placeholder="예: 배달의민족 도현, Pretendard"><button class="small" id="applyLocalFont">적용</button></div>
+      <div class="grid2">
+        <div><label class="lbl" for="size">글자 크기 <span id="sizeVal"></span></label><input type="range" id="size" min="56" max="160" step="2"></div>
+        <div><label class="lbl" for="shade">아래쪽 어둡게</label><input type="range" id="shade" min="0" max="0.9" step="0.05"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="lbl" for="lineH">제목 줄 간격 <span id="lineHVal"></span></label><input type="range" id="lineH" min="0.9" max="1.8" step="0.02"></div>
+        <div><label class="lbl" for="letterSp">제목 글자 간격 <span id="letterSpVal"></span></label><input type="range" id="letterSp" min="-8" max="30" step="1"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="lbl" for="cardFx">글자 그림자</label>
+          <select id="cardFx"><option value="soft">은은한 그림자</option><option value="strong">진한 그림자</option><option value="outline">테두리</option><option value="box">반투명 바탕</option><option value="none">없음</option></select></div>
+        <div><label class="lbl" for="cardFxStr">그림자 진하기 <span id="cardFxStrVal"></span></label><input type="range" id="cardFxStr" min="0" max="100" step="5"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="lbl">정렬</label><div class="seg" id="alignSeg"><button data-v="left">왼쪽</button><button data-v="center">가운데</button></div></div>
+        <div><label class="lbl" for="theme">자동 배경 색</label>
+          <select id="theme"><option value="ai">기사 분위기</option><option value="navy">네이비</option><option value="burgundy">버건디</option><option value="forest">포레스트</option><option value="charcoal">차콜</option><option value="plum">플럼</option></select></div>
+      </div>
+      <div class="grid2">
+        <div><label class="lbl" for="color">글자색</label><input type="color" id="color"></div>
+        <div><label class="lbl" for="hi">강조색</label><input type="color" id="hi"></div>
+      </div>
+      <div class="divider"></div>
+      <div><label class="lbl">배경</label><div class="seg" id="bgSeg"><button data-v="photo">그림 · 사진</button><button data-v="auto">자동 디자인</button></div></div>
+      <div class="row">
+        <button class="small" id="redrawAI">제미나이로 다시 그리기</button>
+        <button class="small" id="upload">내 사진 올리기</button>
+        <input type="file" id="fileIn" class="hidden-file" accept="image/*">
+        <button class="small" id="resetPos">위치 초기화</button>
+      </div>
+      <details><summary class="status">그림 프롬프트 보기 · 고치기 · 복사 (플로우 등에서 쓰기)</summary>
+        <textarea id="imgPrompt" rows="4" style="margin-top:8px"></textarea>
+        <div class="row" style="margin-top:6px"><button class="small" id="copyPrompt">프롬프트 복사</button><span class="status" id="promptStatus"></span></div></details>
+      <div class="grid2">
+        <div><label class="lbl" for="handle">계정 표시</label><input type="text" id="handle"></div>
+        <div><label class="lbl" for="source">출처 표시</label><input type="text" id="source"></div>
+      </div>
+      <button class="primary" id="saveBtn">이 카드 이미지 저장</button>
+    </div>
+  </section>
+
+  <section class="panel" style="grid-area:caption">
+    <h2><span class="step">STEP 3</span>인스타 본문</h2>
+    <p class="hint">스타일을 고르고 다듬은 뒤 복사해서 붙여넣으세요.</p>
+    <div class="captabs" id="capTabs"><button data-v="explain">설명형</button><button data-v="empathy">공감형</button><button data-v="poll">투표형</button></div>
+    <div class="stack">
+      <textarea id="caption" rows="10"></textarea>
+      <div><label class="lbl" for="hashtags">해시태그</label><textarea id="hashtags" rows="2"></textarea></div>
+      <div class="row"><button id="copyCap">본문 + 해시태그 복사</button><span class="status" id="copyStatus"></span></div>
+    </div>
+  </section>
+  <section class="panel" style="grid-area:reels">
+    <h2><span class="step">STEP 4</span>릴스 영상</h2>
+    <p class="hint">지금 카드의 그림과 제목으로 9:16 세로 영상을 만들어요. 목소리는 저장한 영상을 브루에 넣어 붙이세요.</p>
+    <div class="reel-wrap">
+      <div><div class="reel-box"><canvas id="reelCv" width="1080" height="1920" aria-label="릴스 미리보기"></canvas><span class="reel-rec" id="recBadge" hidden>● 녹화 중</span></div>
+        <div class="reel-tip"><span>끌어서 글자 위치 이동</span><button class="small" id="reelPosReset" type="button">위치 초기화</button></div></div>
+      <div class="stack">
+        <div><label class="lbl" for="reelDurMode">장면 길이 정하기</label>
+          <select id="reelDurMode"><option value="narr">내레이션 길이에 맞추기 (TTS용)</option><option value="fixed">모든 장면 같은 길이</option></select></div>
+        <div id="durFixedRow"><label class="lbl" for="reelDur">장면 하나 길이 <span id="reelDurVal"></span></label><input type="range" id="reelDur" min="3" max="15" step="1"></div>
+        <div id="durNarrRow"><label class="lbl" for="reelCps">목소리 빠르기 (1초에 읽는 글자 수) <span id="reelCpsVal"></span></label><input type="range" id="reelCps" min="4" max="9" step="0.5"></div>
+        <div class="grid2">
+          <div><label class="lbl" for="reelMotion">배경 움직임</label>
+            <select id="reelMotion"><option value="zoom">천천히 확대</option><option value="pan">옆으로 흐르기</option><option value="mix">확대 + 흐르기</option></select></div>
+          <div><label class="lbl" for="reelAnim">제목 등장 방식</label>
+            <select id="reelAnim"><option value="type">타이핑 (한 글자씩)</option><option value="slide">한 줄씩 올라오기</option></select></div>
+          <div><label class="lbl" for="reelTitleSize">릴스 제목 크기 <span id="reelTitleSizeVal"></span></label><input type="range" id="reelTitleSize" min="56" max="150" step="2"></div>
+          <div><label class="lbl" for="reelSubSize">릴스 보조 문구 크기 <span id="reelSubSizeVal"></span></label><input type="range" id="reelSubSize" min="32" max="84" step="2"></div>
+          <div><label class="lbl" for="reelY">글자 높이 (위 ↔ 아래) <span id="reelYVal"></span></label><input type="range" id="reelY" min="-50" max="40" step="1"></div>
+          <div><label class="lbl" for="reelGap">제목과 보조 문구 간격 <span id="reelGapVal"></span></label><input type="range" id="reelGap" min="0" max="160" step="4"></div>
+          <div><label class="lbl" for="reelFx">글자 그림자</label>
+            <select id="reelFx"><option value="soft">은은한 그림자</option><option value="strong">진한 그림자</option><option value="outline">테두리</option><option value="box">반투명 바탕</option><option value="none">없음</option></select></div>
+          <div><label class="lbl" for="reelFxStr">그림자 진하기 <span id="reelFxStrVal"></span></label><input type="range" id="reelFxStr" min="0" max="100" step="5"></div>
+          <div><label class="lbl" for="reelScope">영상 범위</label>
+            <select id="reelScope"><option value="mood">감성형: 짧은 문장 + 감성 배경 (사진·영상)</option><option value="list">목록형: 제목 + 항목 나열 (명언·팁)</option><option value="titles">고른 제목들 이어서</option><option value="one">지금 제목 한 장면</option><option value="all">완성 카드 모두 이어서</option></select></div>
+        </div>
+        <div class="ja-box">
+          <div class="grid2">
+            <div><label class="lbl">영상 언어</label><div class="seg" id="langSeg"><button data-v="ko">한국어</button><button data-v="ja">日本語</button></div></div>
+            <div><label class="lbl" for="jaFont">일본어 제목 글꼴</label><select id="jaFont"></select></div>
+          </div>
+          <div class="row" style="margin-top:8px"><button class="small" id="jaBtn" type="button">일본어로 번역하기</button><span class="status" id="jaStatus"></span></div>
+          <div id="jaCapBox" hidden>
+            <label class="lbl" for="jaCaption" style="margin-top:8px">일본어 인스타 본문 + 해시태그</label>
+            <textarea id="jaCaption" rows="6"></textarea>
+            <div class="row" style="margin-top:6px"><button class="small" id="jaCopy" type="button">일본어 본문 복사</button><span class="status" id="jaCopyStatus"></span></div>
+          </div>
+        </div>
+        <div class="picklist" id="pickList"></div>
+        <div><label class="lbl">배경음악 (MP3 등, 선택)</label>
+          <div class="row"><button class="small" id="bgmPick">음악 파일 고르기</button><button class="small" id="bgmClear" hidden>빼기</button><input type="file" id="bgmFile" class="hidden-file" accept="audio/*"></div>
+          <div class="bgm-name" id="bgmName">음악 없음</div></div>
+        <div><label class="lbl" for="bgmVol">음악 크기 <span id="bgmVolVal"></span></label><input type="range" id="bgmVol" min="0" max="1" step="0.05"></div>
+        <div class="row">
+          <button id="reelPlay">미리보기 재생</button>
+          <button class="primary" id="reelRec">영상 만들기</button>
+        </div>
+        <div class="status" id="reelStatus">영상은 실제 길이보다 빨리 만들어져요. 다 만들어질 때까지 이 창을 닫지 마세요.</div>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const W = 1080, H = 1350, N = 3;
+const API = 'https://generativelanguage.googleapis.com/v1beta/models/';
+
+const FONTS = [
+  ['bh','검은고딕 · 굵고 강함','Black Han Sans',400],
+  ['nk','노토 산스 Black','Noto Sans KR',900],
+  ['ga','고딕 A1 Black','Gothic A1',900],
+  ['dh','도현 · 둥근 제목체','Do Hyeon',400],
+  ['jua','주아 · 귀여운 둥근체','Jua',400],
+  ['sf','해바라기 · 부드러운','Sunflower',700],
+  ['gb','고운바탕 · 명조','Gowun Batang',700],
+  ['nm','나눔명조 ExtraBold','Nanum Myeongjo',800],
+  ['ns','노토 세리프 Black','Noto Serif KR',900],
+  ['hm','함렛 · 굵은 명조','Hahmlet',800],
+  ['sm','송명 · 신문 제목','Song Myung',400],
+  ['yeon','연성 · 붓글씨','Yeon Sung',400],
+  ['gugi','구기 · 레트로','Gugi',400],
+  ['gaegu','개구 · 손글씨','Gaegu',700],
+  ['pen','나눔펜 · 손글씨','Nanum Pen Script',400],
+  ['dokdo','독도 · 거친 손글씨','Dokdo',400]
+];
+const fontMap = {}; FONTS.forEach(([k,label,fam,w]) => fontMap[k] = {label, fam, w});
+const THEMES = {
+  navy:{bg1:'#0B1733',bg2:'#1E3E70',accent:'#5CC8FF'}, burgundy:{bg1:'#2A0A12',bg2:'#6B1A2A',accent:'#FF8A65'},
+  forest:{bg1:'#0B1F17',bg2:'#1F4A36',accent:'#9BE15D'}, charcoal:{bg1:'#121316',bg2:'#33363D',accent:'#F5C542'},
+  plum:{bg1:'#1A0F2E',bg2:'#4A2A6B',accent:'#F78FB3'}
+};
+
+// ---------- storage ----------
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('cns_'+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('cns_'+k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+const settings = Object.assign({apiKey:'', imgModel:'gemini-3.1-flash-image', textModel:'gemini-3.8-flash', handle:'', autoImg:true, tone:'news', extraRules:'', imgRes:'2K'}, store.get('settings', {}));
+const TONES = {
+  news:'말투: 이슈·뉴스형. 제목은 짧고 강하게, 본문은 핵심 위주로 간결하게.',
+  senior:'말투: 시니어 채널형. 50~70대 독자에게 말하듯 따뜻한 존댓말(~요, ~습니다). 어려운 한자어·영어·줄임말 대신 쉬운 우리말. 한 문장은 짧게. 독자의 생활에 실제로 도움이 되는 점을 먼저 말한다. 겁주거나 불안을 부추기는 표현은 피한다. 제목도 존댓말이나 질문형("~아시나요?", "~꼭 확인하세요")을 섞는다.',
+  friendly:'말투: 친구에게 말하듯 친근하고 가벼운 존댓말. 공감 표현을 자주 쓰고 딱딱한 표현은 피한다.',
+  expert:'말투: 전문가 해설형. 차분하고 신뢰감 있게, 사실과 숫자를 정확히 짚고 의미를 쉽게 풀어준다. 과장 표현은 쓰지 않는다.',
+  morning:'말투: 아침 명상형. 이른 아침 조용히 건네는 다정한 존댓말. 한 문장은 아주 짧게, 쉼표와 줄바꿈으로 호흡을 준다. 숨, 햇살, 바람, 차 한 잔처럼 감각적인 아침 장면을 쓴다. 다그치거나 가르치지 않고 "~해봐요", "~괜찮아요"처럼 부드럽게 권한다. 건강 효과를 단정하지 않는다. 제목은 오늘 하루를 여는 한 문장.',
+  advice:'말투: 인생 조언형. 40~70대에게 인생 선배가 조용히 건네는 말처럼 따뜻하지만 단단한 존댓말. 훈계·명령조("~해야 한다") 대신 권유와 공감("~해보면 어떨까요", "~더라고요"). 구체적인 장면 하나를 넣고 문장은 짧게. 제목은 여운이 남는 한 문장.'
+};
+function styleRules(){ const t = TONES[settings.tone] || TONES.news; const x = (settings.extraRules || '').trim(); return t + (x ? '\n추가 요청(반드시 지킨다): ' + x : ''); }
+const style = Object.assign({lineH:1.24, letterSp:0, fx:'soft', fxStr:55, font:'bh', subFont:'base', customFamily:'', size:104, shade:0.55, align:'left', color:'#FFFFFF', hi:'#FFD43B'}, store.get('style', {}));
+
+function blankCard(){
+  return {photoHiKey:'', mode:'news', url:'', article:'', titles:[], title:'', sub:'', tag:'', keyword:'', aiPalette:{bg1:'#14213D',bg2:'#2E4A7D',accent:'#7FB3FF'},
+    theme:'ai', seed:Math.floor(Math.random()*1e9), bgMode:'auto', photoData:'', imagePrompt:'',
+    lineH:style.lineH || 1.24, letterSp:style.letterSp || 0, fx:style.fx || 'soft', fxStr:style.fxStr == null ? 55 : style.fxStr,
+    font:style.font, subFont:style.subFont || 'base', customFamily:style.customFamily, size:style.size, shade:style.shade, align:style.align, color:style.color, hi:style.hi,
+    bx:0.07, by:0.55, handle:settings.handle, source:'', captions:{explain:'',empathy:'',poll:''}, capType:'empathy', hashtags:'', status:'empty', msg:''};
+}
+let cards = store.get('cards', null);
+if (!Array.isArray(cards) || cards.length !== N) cards = Array.from({length:N}, blankCard);
+cards = cards.map(c => Object.assign(blankCard(), c, {status: c.status === 'busy' ? (c.titles && c.titles.length ? 'done' : 'empty') : c.status}));
+let active = Math.min(store.get('active', 0), N-1);
+const runtime = cards.map(() => ({photo:null, bg:null, bgKey:'', busy:false}));
+let saveTimer;
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (!store.set('cards', cards)) {
+      // 용량 초과 시 그림 없이라도 글은 저장
+      store.set('cards', cards.map(c => Object.assign({}, c, {photoData:''})));
+    }
+    store.set('active', active);
+  }, 400);
+}
+const C = () => cards[active];
+const R = () => runtime[active];
+
+// ---------- small utils ----------
+function rng(seed){ let a = seed >>> 0; return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hexA(hex, a){ const m = /^#?([0-9a-f]{6})$/i.exec(hex||''); const n = parseInt(m ? m[1] : '888888', 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+const isHex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+function subFamOf(c, reelMode){
+  const k = c.subFont || 'base';
+  if (k === 'base') return {fam:'Noto Sans KR', w: reelMode ? 700 : 500};
+  if (k === 'custom' && c.customFamily) return {fam:c.customFamily, w:400};
+  return fontMap[k] || {fam:'Noto Sans KR', w: reelMode ? 700 : 500};
+}
+function subFontSpec(c, px, reelMode){ const f = subFamOf(c, reelMode); return `${f.w} ${px}px "${f.fam}", "Noto Sans KR", "Malgun Gothic", sans-serif`; }
+function famOf(c){ if (c.font === 'custom' && c.customFamily) return {fam:c.customFamily, w:400}; return fontMap[c.font] || fontMap.bh; }
+function fontSpec(c, px){ const f = famOf(c); return `${f.w} ${px}px "${f.fam}", "Malgun Gothic", "Noto Sans KR", sans-serif`; }
+function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 3000); }
+function loadImage(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+function coverToJpeg(img, scale, q){
+  const k = scale || 1, cw = Math.round(W * k), ch = Math.round(H * k);
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+  const s = Math.max(cw/img.width, ch/img.height);
+  g.drawImage(img, (cw - img.width*s)/2, (ch - img.height*s)/2, img.width*s, img.height*s);
+  return c.toDataURL('image/jpeg', q || 0.88);
+}
+// keep a sharp copy (up to 2x) for reels; size depends on the source picture
+function hiScale(img){ return Math.max(1, Math.min(2, Math.min(img.width / W, img.height / H))); }
+const idb = {
+  db: null,
+  open(){ if (this.db) return this.db; this.db = new Promise((res, rej) => { try{ const r = indexedDB.open('cns', 1); r.onupgradeneeded = () => r.result.createObjectStore('photos'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }catch(e){ rej(e); } }); return this.db; },
+  async put(k, v){ try{ const db = await this.open(); await new Promise((res, rej) => { const t = db.transaction('photos', 'readwrite'); t.objectStore('photos').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); }catch(e){} },
+  async get(k){ try{ const db = await this.open(); return await new Promise((res, rej) => { const t = db.transaction('photos'); const q = t.objectStore('photos').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }catch(e){ return null; } },
+  async del(k){ try{ const db = await this.open(); await new Promise(res => { const t = db.transaction('photos', 'readwrite'); t.objectStore('photos').delete(k); t.oncomplete = res; t.onerror = res; }); }catch(e){} }
+};
+
+// ---------- rendering ----------
+function buildBg(i){
+  const c = cards[i], r = runtime[i];
+  const p = c.theme === 'ai' ? c.aiPalette : THEMES[c.theme];
+  const usePhoto = c.bgMode === 'photo' && r.photo;
+  const key = JSON.stringify([usePhoto ? 'p'+c.photoData.length : 'a', c.seed, p, c.keyword, c.font, c.customFamily]);
+  if (r.bg && key === r.bgKey) return r.bg;
+  const BS = 2;
+  const cv = r.bg || document.createElement('canvas'); cv.width = W * BS; cv.height = H * BS; r.bg = cv; r.bgKey = key;
+  const g = cv.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height);
+  g.imageSmoothingQuality = 'high';
+  if (usePhoto){ g.drawImage(r.photo, 0, 0, cv.width, cv.height); return cv; }
+  g.setTransform(BS,0,0,BS,0,0);
+  const rnd = rng(c.seed);
+  const pts = [[0,0,W,H],[W,0,0,H],[0,H,W,0],[W,H,0,0]][Math.floor(rnd()*4)];
+  const lin = g.createLinearGradient(...pts); lin.addColorStop(0, p.bg1); lin.addColorStop(1, p.bg2);
+  g.fillStyle = lin; g.fillRect(0,0,W,H);
+  const blobs = 3 + Math.floor(rnd()*3);
+  for (let k=0;k<blobs;k++){
+    const cx = rnd()*W, cy = rnd()*H*0.75, rad = 260 + rnd()*560;
+    const rg = g.createRadialGradient(cx,cy,0,cx,cy,rad);
+    rg.addColorStop(0, hexA(p.accent, Math.max(0.12, 0.5 - k*0.08))); rg.addColorStop(1, hexA(p.accent, 0));
+    g.fillStyle = rg; g.fillRect(0,0,W,H);
+  }
+  const v = Math.floor(rnd()*3);
+  g.strokeStyle = 'rgba(255,255,255,0.07)'; g.lineWidth = 2;
+  if (v === 0){ for (let x=90;x<W;x+=90){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); } for (let y=90;y<H;y+=90){ g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); } }
+  else if (v === 1){ const cx = W*(0.6+rnd()*0.3), cy = H*(0.15+rnd()*0.25); for (let k=1;k<14;k++){ g.beginPath(); g.arc(cx,cy,k*70,0,Math.PI*2); g.stroke(); } }
+  else { g.save(); g.translate(W/2,H/2); g.rotate(-Math.PI/5); for (let x=-H;x<H;x+=46){ g.beginPath(); g.moveTo(x,-H); g.lineTo(x,H); g.stroke(); } g.restore(); }
+  if (c.keyword){
+    g.save(); let fs = 520; g.font = fontSpec(c, fs);
+    const tw = g.measureText(c.keyword).width || 1; fs = Math.min(640, fs*(W*1.05)/tw); g.font = fontSpec(c, fs);
+    g.translate(W/2, H*0.3); g.rotate(-0.06 + rnd()*0.03); g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(255,255,255,0.075)'; g.fillText(c.keyword, 0, 0); g.restore();
+  }
+  g.setTransform(1,0,0,1,0,0);
+  const id = g.getImageData(0,0,cv.width,cv.height), d = id.data;
+  for (let k=0;k<d.length;k+=4){ const n = (rnd()-0.5)*16; d[k]+=n; d[k+1]+=n; d[k+2]+=n; }
+  g.putImageData(id,0,0);
+  return cv;
+}
+function normBrackets(t){ return String(t || '').replace(/[［【〔]/g, '[').replace(/[］】〕]/g, ']'); }
+function parseRuns(s){ const out = []; let hi = false; for (const ch of normBrackets(s)){ if (ch==='['){hi=true;continue;} if (ch===']'){hi=false;continue;} out.push({ch,hi}); } return out; }
+const strOf = a => a.map(c => c.ch).join('');
+const NO_START = '、。，．,.・ー〜」』）)】!！?？…ぁぃぅぇぉっゃゅょァィゥェォッャュョ';
+function layout(ctx, text, maxW){
+  const lines = [];
+  for (const par of String(text).split('\n')){
+    const tokens = []; let cur = [];
+    for (const c of parseRuns(par)){ if (c.ch === ' '){ if (cur.length) tokens.push(cur); tokens.push([c]); cur = []; } else cur.push(c); }
+    if (cur.length) tokens.push(cur);
+    let line = [], lw = 0;
+    const flush = () => { while (line.length && line[line.length-1].ch === ' ') line.pop(); lines.push(line); line = []; lw = 0; };
+    for (const t of tokens){
+      const tw = ctx.measureText(strOf(t)).width;
+      if (lw + tw > maxW && line.length){ flush(); if (t[0].ch === ' ') continue; }
+      if (tw > maxW){ for (const c of t){ const cw = ctx.measureText(c.ch).width; if (lw + cw > maxW && line.length && !NO_START.includes(c.ch)) flush(); line.push(c); lw += cw; } continue; }
+      line.push(...t); lw += tw;
+    }
+    flush();
+  }
+  return lines;
+}
+function runsOf(line){ const out = []; for (const c of line){ const l = out[out.length-1]; if (l && l.hi === c.hi) l.t += c.ch; else out.push({t:c.ch, hi:c.hi}); } return out; }
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawCard(ctx, i){
+  const c = cards[i];
+  ctx.save(); ctx.clearRect(0,0,W,H);
+  ctx.imageSmoothingQuality = 'high'; ctx.drawImage(buildBg(i), 0, 0, W, H);
+  if (c.shade > 0){ const sg = ctx.createLinearGradient(0, H*0.28, 0, H); sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(1,`rgba(0,0,0,${c.shade})`); ctx.fillStyle = sg; ctx.fillRect(0,0,W,H); }
+  const maxW = W*0.86, left = c.bx*W, top = c.by*H, fs = c.size, lh = fs*(c.lineH || 1.24);
+  const FX = cardFx(c);
+  const title = c.title || (c.status === 'empty' ? '기사를 넣고\n[만들기]를 눌러주세요' : '');
+  ctx.textBaseline = 'top';
+  if (c.tag.trim()){
+    ctx.font = '700 34px "Noto Sans KR", "Malgun Gothic", sans-serif';
+    const tw = ctx.measureText(c.tag).width, pw = tw + 52, ph = 58;
+    const tx = c.align === 'center' ? left + (maxW - pw)/2 : left, ty = top - ph - 30;
+    ctx.fillStyle = c.hi; rr(ctx, tx, ty, pw, ph, 29); ctx.fill();
+    ctx.fillStyle = '#111318'; ctx.fillText(c.tag, tx + 26, ty + 9);
+  }
+  ctx.font = fontSpec(c, fs); setLS(ctx, c.letterSp);
+  const tLines = layout(ctx, title, maxW);
+  const subStr = c.sub.replace(/[\[\]［］【】〔〕]/g,'');
+  let sLines = [];
+  if (c.sub.trim()){ setLS(ctx, 0); ctx.font = subFontSpec(c, 40, false); sLines = layout(ctx, subStr, maxW); ctx.font = fontSpec(c, fs); setLS(ctx, c.letterSp); }
+  if (FX.fx === 'box' && title){
+    let wMax = 0; for (const line of tLines){ wMax = Math.max(wMax, ctx.measureText(strOf(line)).width); }
+    setLS(ctx, 0); ctx.font = subFontSpec(c, 40, false); for (const line of sLines){ wMax = Math.max(wMax, ctx.measureText(strOf(line)).width); }
+    ctx.font = fontSpec(c, fs); setLS(ctx, c.letterSp);
+    const pad = Math.round(fs * 0.36), k = FX.fxStr / 100;
+    const bh = tLines.length * lh + (sLines.length ? fs * 0.18 + sLines.length * 54 : 0) + pad * 1.4;
+    const bx = c.align === 'center' ? left + (maxW - wMax)/2 - pad : left - pad;
+    ctx.fillStyle = `rgba(${fxShade(c)},${0.3 + 0.45 * k})`; rr(ctx, Math.max(12, bx), top - pad * 0.7, Math.min(W - 24, wMax + pad * 2), bh, Math.round(fs * 0.2)); ctx.fill();
+  }
+  fxSet(ctx, c, fs, FX);
+  let y = top;
+  for (const line of tLines){
+    const runs = runsOf(line); const total = runs.reduce((s,r) => s + ctx.measureText(r.t).width, 0);
+    let x = c.align === 'center' ? left + (maxW - total)/2 : left;
+    for (const r of runs){ ctx.fillStyle = r.hi ? c.hi : c.color; fxText(ctx, c, r.t, x, y, fs, FX); x += ctx.measureText(r.t).width; }
+    y += lh;
+  }
+  setLS(ctx, 0);
+  if (sLines.length){
+    y += fs*0.18; ctx.font = subFontSpec(c, 40, false); ctx.fillStyle = hexA(c.color, 0.9); fxSet(ctx, c, 40, FX);
+    for (const line of sLines){ const t = strOf(line), tw = ctx.measureText(t).width; fxText(ctx, c, t, c.align === 'center' ? left + (maxW - tw)/2 : left, y, 40, FX); y += 54; }
+  }
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.shadowColor = 'transparent';
+  ctx.textBaseline = 'alphabetic';
+  if (c.handle.trim()){ ctx.font = '500 30px "Noto Sans KR", "Malgun Gothic", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.textAlign = 'left'; ctx.fillText(c.handle, W*0.07, H - 64); }
+  if (c.source.trim()){ ctx.font = '500 26px "Noto Sans KR", "Malgun Gothic", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.62)'; ctx.textAlign = 'right'; ctx.fillText(c.source, W*0.93, H - 64); }
+  ctx.restore();
+}
+const cv = $('#cv'), ctx = cv.getContext('2d');
+let raf = false;
+function requestRender(){ if (raf) return; raf = true; requestAnimationFrame(() => { raf = false; drawCard(ctx, active); drawThumb(active); if (!playing) showStill(); }); }
+function drawThumb(i){ const t = document.getElementById('thumb'+i); if (!t) return; const g = t.getContext('2d'); g.drawImage(cv && i === active ? cv : renderOff(i), 0, 0, t.width, t.height); }
+function renderOff(i){ const o = document.createElement('canvas'); o.width = W; o.height = H; drawCard(o.getContext('2d'), i); return o; }
+let fontTimer;
+function ensureFonts(){
+  clearTimeout(fontTimer);
+  fontTimer = setTimeout(async () => {
+    const c = C(), f = famOf(c);
+    const txt = (c.title + c.keyword + c.sub + c.tag + c.handle + c.source).replace(/\s/g,'') || '가나다';
+    const sf = subFamOf(c, false), sf2 = subFamOf(c, true);
+    const subTxt = (c.sub + ((c.reelTitles || []).map(x => (x && x.sub) || '').join(''))).replace(/\s/g,'') || '가나다';
+    try{ await Promise.all([document.fonts.load(`${f.w} 64px "${f.fam}"`, txt), document.fonts.load(`${sf.w} 40px "${sf.fam}"`, subTxt), document.fonts.load(`${sf2.w} 40px "${sf2.fam}"`, subTxt), document.fonts.load('500 40px "Noto Sans KR"', txt), document.fonts.load('700 34px "Noto Sans KR"', txt)]); }catch(e){}
+    if (typeof moodF === 'function' && reel.scope === 'mood'){ const mf = moodF(); try{ await document.fonts.load(`${mf.w} 56px "${mf.fam}"`, '가나다' + txt); }catch(e){} }
+    if (typeof isJa === 'function' && isJa()){ const f = jaF(); try{ await Promise.all([document.fonts.load(`${f.w} 64px "${f.fam}"`, 'あ日本語'), document.fonts.load('700 40px "Noto Sans JP"', 'あ日本語')]); }catch(e){} }
+    try{ if (!playing) showStill(); }catch(e){}
+    R().bgKey = ''; requestRender();
+  }, 100);
+}
+
+// ---------- tabs ----------
+function statusLabel(c, i){
+  if (runtime[i].busy) return ['busy', c.msg || '만드는 중…'];
+  if (c.status === 'done') return ['done', '완성'];
+  if (c.status === 'err') return ['err', '다시 시도 필요'];
+  return ['', (c.url || c.article) ? (c.mode === 'topic' ? '주제 준비됨' : '기사 준비됨') : '비어 있음'];
+}
+const tabEls = [];
+function buildTabs(){
+  const bar = $('#tabsbar');
+  cards.forEach((c, i) => {
+    const b = document.createElement('button'); b.className = 'ctab'; b.setAttribute('role','tab');
+    const t = document.createElement('canvas'); t.width = 80; t.height = 100; t.id = 'thumb'+i;
+    const meta = document.createElement('span'); meta.className = 'meta';
+    const bt = document.createElement('b'); bt.textContent = `카드 ${i+1}`;
+    const st = document.createElement('span'); const d = document.createElement('i'); const tx = document.createElement('span');
+    st.append(d, tx); meta.append(bt, st); b.append(t, meta);
+    b.onclick = () => { if (i === active) return; active = i; persist(); syncAll(); };
+    bar.append(b); tabEls.push({b, d, tx});
+  });
+  const sp = document.createElement('span'); sp.className = 'spacer'; bar.append(sp);
+  const all = document.createElement('button'); all.className = 'primary'; all.textContent = '기사 넣은 카드 모두 만들기'; all.id = 'genAll'; all.onclick = generateAll;
+  const sv = document.createElement('button'); sv.textContent = '완성 카드 모두 저장'; sv.id = 'saveAll'; sv.onclick = saveAll;
+  bar.append(all, sv);
+}
+function renderTabs(){
+  if (!tabEls.length) buildTabs();
+  cards.forEach((c, i) => {
+    const [cls, txt] = statusLabel(c, i), e = tabEls[i];
+    e.b.setAttribute('aria-selected', String(i === active)); e.d.className = 'dot ' + cls; e.tx.textContent = txt;
+  });
+  $('#genAll').disabled = runtime.some(r => r.busy);
+  cards.forEach((_, i) => drawThumb(i));
+}
+
+// ---------- form sync ----------
+function fillFontSelect(){
+  const fams = new Set(cards.map(c => c.customFamily).concat(style.customFamily).filter(Boolean));
+  ['#font', '#subFont'].forEach(id => {
+    const s = $(id); s.textContent = '';
+    if (id === '#subFont'){ const o = document.createElement('option'); o.value = 'base'; o.textContent = '기본 (노토 산스, 읽기 편함)'; s.append(o); }
+    FONTS.forEach(([k,label]) => { const o = document.createElement('option'); o.value = k; o.textContent = label; s.append(o); });
+    if (fams.size){ const o = document.createElement('option'); o.value = 'custom'; o.textContent = '내 폰트: ' + (C().customFamily || style.customFamily); s.append(o); }
+  });
+}
+function syncSeg(id, val){ document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === val))); }
+function picksOf(c){ const l = (c.reelTitles || []).map(x => typeof x === 'string' ? {title:x, sub:c.sub || ''} : x); c.reelTitles = l; return l; }
+function renderChips(){
+  const c = C(), box = $('#chips'); box.textContent = '';
+  if (!c.titles.length){ const e = document.createElement('div'); e.className = 'empty'; e.textContent = '만들기를 누르면 제목 후보 5개가 여기에 나와요.'; box.append(e); return; }
+  c.titles.forEach((t, i) => {
+    const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.setAttribute('aria-pressed', String(t === c.title));
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = String(i+1).padStart(2,'0');
+    const body = document.createElement('span');
+    for (const r of runsOf(parseRuns(t))){ if (r.hi){ const m = document.createElement('mark'); m.textContent = r.t; body.append(m); } else body.append(r.t); }
+    b.append(n, body);
+    b.onclick = () => { c.title = t; $('#title').value = t; renderChips(); persist(); ensureFonts(); requestRender(); };
+    const picks = picksOf(c), at = picks.findIndex(x => x.title === t);
+    const pk = document.createElement('button'); pk.type = 'button'; pk.className = 'pick'; pk.setAttribute('aria-pressed', String(at >= 0));
+    pk.textContent = at >= 0 ? `릴스 ${at + 1}번` : '+ 릴스에 넣기';
+    pk.onclick = () => {
+      const l = picksOf(c).slice(), k = l.findIndex(x => x.title === t);
+      if (k >= 0) l.splice(k, 1); else { if (l.length >= 8){ toast('릴스에는 8개까지 넣을 수 있어요.'); return; } l.push({title:t, sub:c.sub || ''}); }
+      c.reelTitles = l; if (l.length) { reel.scope = 'titles'; saveReel(); syncReelUI(); }
+      persist(); renderChips(); if (!playing) showStill();
+    };
+    const row = document.createElement('div'); row.className = 'chiprow'; row.append(b, pk);
+    box.append(row);
+  });
+}
+function syncCaption(){ const c = C(); syncSeg('capTabs', c.capType); $('#caption').value = c.captions[c.capType] || ''; $('#caption').placeholder = '만들기를 누르면 본문이 채워져요.'; }
+function syncVeil(){ const r = R(), c = C(); $('#veil').hidden = !r.busy; $('#veil').textContent = c.msg || '만드는 중…'; $('#genBtn').disabled = r.busy; $('#redrawAI').disabled = r.busy; $('#moreTitles').disabled = r.busy; }
+function syncStatus(){ const c = C(), s = $('#genStatus'); s.className = 'status' + (c.status === 'err' ? ' err' : c.status === 'done' && !R().busy ? ' ok' : ''); s.textContent = R().busy ? (c.msg || '') : (c.status === 'err' ? c.msg : c.status === 'done' ? '완성! 제목을 고르고 저장하세요.' : ''); }
+function syncMode(){
+  const c = C(), t = c.mode === 'topic';
+  syncSeg('modeSeg', c.mode || 'news');
+  $('#urlRow').hidden = t;
+  $('#articleLbl').textContent = t ? '주제나 하고 싶은 이야기' : '기사 본문 (선택)';
+  $('#article').placeholder = t ? '예: 나이 들수록 정리해야 할 인간관계와 끝까지 남겨야 할 사람\n대본 일부나 내 경험을 적어도 좋아요.' : '기사 제목과 본문을 붙여넣기';
+  $('#modeHint').textContent = t ? '기사 없이 주제만으로 카드를 만들어요. 아침 명상글은 설정에서 말투를 "아침 명상형", 인생 조언은 "인생 조언형"으로 고르세요.' : '링크만 넣어도 되고, 링크가 안 읽히면 본문을 붙여넣으세요. 본문이 있으면 본문을 우선 사용해요.';
+}
+$('#modeSeg').addEventListener('click', e => { const v = e.target.dataset && e.target.dataset.v; if (!v) return; C().mode = v; persist(); syncMode(); renderTabs(); });
+function syncAll(){
+  const c = C();
+  syncMode();
+  fillFontSelect();
+  $('#url').value = c.url; $('#article').value = c.article;
+  $('#title').value = c.title; $('#sub').value = c.sub; $('#tag').value = c.tag;
+  $('#font').value = c.font; $('#size').value = c.size; $('#sizeVal').textContent = c.size + 'px';
+  $('#lineH').value = c.lineH || 1.24; $('#lineHVal').textContent = (c.lineH || 1.24).toFixed(2) + '배';
+  $('#letterSp').value = c.letterSp || 0; $('#letterSpVal').textContent = (c.letterSp || 0) + 'px';
+  $('#cardFx').value = c.fx || 'soft'; $('#cardFxStr').value = c.fxStr == null ? 55 : c.fxStr; $('#cardFxStrVal').textContent = (c.fxStr == null ? 55 : c.fxStr) + '%'; $('#cardFxStr').disabled = c.fx === 'none';
+  $('#shade').value = c.shade; $('#color').value = c.color; $('#hi').value = c.hi; $('#theme').value = c.theme;
+  $('#handle').value = c.handle; $('#source').value = c.source; $('#hashtags').value = c.hashtags; $('#imgPrompt').value = c.imagePrompt;
+  syncSeg('alignSeg', c.align); syncSeg('bgSeg', c.bgMode);
+  $('#fontPrev').style.fontFamily = `"${famOf(c).fam}", "Malgun Gothic", sans-serif`; $('#fontPrev').style.fontWeight = famOf(c).w;
+  $('#subFont').value = c.subFont || 'base';
+  $('#subFontPrev').style.fontFamily = `"${subFamOf(c, false).fam}", "Malgun Gothic", sans-serif`; $('#subFontPrev').style.fontWeight = subFamOf(c, false).w;
+  renderChips(); syncCaption(); syncVeil(); syncStatus(); renderTabs(); ensureFonts(); requestRender();
+}
+function rememberStyle(){
+  const c = C(); Object.assign(style, {lineH:c.lineH, letterSp:c.letterSp, fx:c.fx, fxStr:c.fxStr, font:c.font, subFont:c.subFont || 'base', customFamily:c.customFamily, size:c.size, shade:c.shade, align:c.align, color:c.color, hi:c.hi}); store.set('style', style);
+}
+const bind = (id, key, num, isStyle) => $('#'+id).addEventListener('input', e => {
+  const c = C(); c[key] = num ? Number(e.target.value) : e.target.value;
+  if (key === 'size') $('#sizeVal').textContent = c.size + 'px';
+  if (key === 'title') renderChips();
+  if (isStyle) rememberStyle();
+  persist(); ensureFonts(); requestRender();
+});
+bind('url','url'); bind('article','article'); bind('title','title'); bind('sub','sub'); bind('tag','tag'); bind('handle','handle'); bind('source','source');
+bind('size','size',true,true); bind('lineH','lineH',true,true); bind('letterSp','letterSp',true,true); bind('cardFxStr','fxStr',true,true);
+['lineH','letterSp','cardFxStr'].forEach(id => $('#'+id).addEventListener('input', () => { const c = C(); $('#lineHVal').textContent = (c.lineH || 1.24).toFixed(2) + '배'; $('#letterSpVal').textContent = (c.letterSp || 0) + 'px'; $('#cardFxStrVal').textContent = c.fxStr + '%'; if (!playing) showStill(); }));
+$('#cardFx').addEventListener('change', e => { const c = C(); c.fx = e.target.value; $('#cardFxStr').disabled = c.fx === 'none'; rememberStyle(); persist(); requestRender(); }); bind('shade','shade',true,true); bind('color','color',false,true); bind('hi','hi',false,true); bind('imgPrompt','imagePrompt');
+$('#url').addEventListener('change', renderTabs); $('#article').addEventListener('change', renderTabs);
+$('#subFont').addEventListener('change', e => { const c = C(); c.subFont = e.target.value; if (c.subFont === 'custom' && !c.customFamily) c.customFamily = style.customFamily; rememberStyle(); persist(); syncAll(); });
+$('#font').addEventListener('change', e => { const c = C(); c.font = e.target.value; if (c.font === 'custom' && !c.customFamily) c.customFamily = style.customFamily; rememberStyle(); persist(); syncAll(); });
+$('#theme').addEventListener('change', e => { C().theme = e.target.value; persist(); requestRender(); });
+$('#alignSeg').addEventListener('click', e => { const v = e.target.dataset.v; if (!v) return; C().align = v; syncSeg('alignSeg', v); rememberStyle(); persist(); requestRender(); });
+$('#bgSeg').addEventListener('click', e => { const v = e.target.dataset.v; if (!v) return; if (v === 'photo' && !R().photo){ toast('아직 그림이 없어요. 제미나이로 그리거나 사진을 올려주세요.'); return; } C().bgMode = v; syncSeg('bgSeg', v); persist(); requestRender(); });
+$('#capTabs').addEventListener('click', e => { const v = e.target.dataset.v; if (!v) return; C().capType = v; persist(); syncCaption(); });
+$('#caption').addEventListener('input', e => { const c = C(); c.captions[c.capType] = e.target.value; persist(); });
+$('#hashtags').addEventListener('input', e => { C().hashtags = e.target.value; persist(); });
+$('#resetPos').onclick = () => { const c = C(); c.bx = 0.07; c.by = 0.55; persist(); requestRender(); };
+$('#clearCard').onclick = () => { if (R().busy) return; cards[active] = blankCard(); runtime[active] = {photo:null, bg:null, bgKey:'', busy:false}; persist(); syncAll(); };
+
+// drag
+let drag = null;
+cv.addEventListener('pointerdown', e => { drag = {x:e.clientX, y:e.clientY, bx:C().bx, by:C().by}; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => { if (!drag) return; const r = cv.getBoundingClientRect(), c = C();
+  c.bx = Math.min(0.6, Math.max(-0.2, drag.bx + (e.clientX - drag.x)/r.width)); c.by = Math.min(0.95, Math.max(0.08, drag.by + (e.clientY - drag.y)/r.height)); requestRender(); });
+const endDrag = () => { if (drag) persist(); drag = null; };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+// fonts: local + upload
+$('#useLocalFont').onclick = () => { $('#localFontRow').hidden = !$('#localFontRow').hidden; $('#localFontName').value = C().customFamily || ''; $('#localFontName').focus(); };
+$('#applyLocalFont').onclick = () => {
+  const name = $('#localFontName').value.trim(); if (!name) return;
+  const ok = document.fonts.check(`40px "${name}"`, '가');
+  const c = C(); c.font = 'custom'; c.customFamily = name; rememberStyle(); persist(); syncAll();
+  toast(ok ? `"${name}" 적용했어요. 글자가 기본체로 보이면 이름이 정확한지 확인해 주세요.` : `"${name}" 적용했어요.`);
+};
+$('#uploadFont').onclick = () => $('#fontFile').click();
+$('#fontFile').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+  const name = f.name.replace(/\.(ttf|otf|woff2?)$/i, '');
+  try{
+    const face = new FontFace(name, await f.arrayBuffer()); await face.load(); document.fonts.add(face);
+    const c = C(); c.font = 'custom'; c.customFamily = name; rememberStyle(); persist(); syncAll();
+    toast(`"${name}" 폰트를 올렸어요. 프로그램을 다시 열면 한 번 더 올려야 해요.`);
+  }catch(err){ toast('이 폰트 파일은 열 수 없어요. TTF나 OTF 파일로 다시 시도해 주세요.'); }
+});
+
+// photo upload
+$('#upload').onclick = () => $('#fileIn').click();
+$('#fileIn').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+  const i = active;
+  try{ const img = await loadImage(URL.createObjectURL(f)); await setPhotoFromImage(i, img); }
+  catch(err){ toast('이 사진은 열 수 없어요. JPG나 PNG로 다시 시도해 주세요.'); }
+});
+async function setPhoto(i, lowUrl, hiUrl){
+  const img = await loadImage(hiUrl || lowUrl);
+  const stamp = Date.now();
+  cards[i].photoData = lowUrl; cards[i].photoHiKey = hiUrl ? 'p' + i + '_' + stamp : ''; cards[i].bgMode = 'photo'; runtime[i].photo = img; runtime[i].bgKey = '';
+  if (hiUrl) await idb.put(cards[i].photoHiKey, hiUrl);
+  persist(); if (i === active){ syncSeg('bgSeg','photo'); requestRender(); } drawThumb(i);
+}
+async function setPhotoFromImage(i, img){ await setPhoto(i, coverToJpeg(img, 1, 0.85), hiScale(img) > 1.05 ? coverToJpeg(img, hiScale(img), 0.92) : ''); }
+
+// copy
+async function copyText(text, statusEl, fallbackEl){
+  try{ await navigator.clipboard.writeText(text); statusEl.textContent = '복사했어요'; }
+  catch(e){ if (fallbackEl){ fallbackEl.focus(); fallbackEl.select(); } statusEl.textContent = fallbackEl ? 'Ctrl+C로 복사하세요' : '복사가 막혀 있어요'; }
+  setTimeout(() => statusEl.textContent = '', 2500);
+}
+$('#copyPrompt').onclick = () => copyText(($('#imgPrompt').value.trim() + '\n\n세로 4:5 비율, 글자·로고 없이, 아래쪽은 제목을 얹을 수 있게 차분하고 어둡게.').trim(), $('#promptStatus'), $('#imgPrompt'));
+$('#autoImg').checked = settings.autoImg;
+$('#autoImg').addEventListener('change', e => { settings.autoImg = e.target.checked; store.set('settings', settings); });
+$('#copyCap').onclick =() => copyText(($('#caption').value.trim() + '\n\n' + $('#hashtags').value.trim()).trim(), $('#copyStatus'), $('#caption'));
+
+// ---------- settings ----------
+function fillSettings(){ $('#apiKey').value = settings.apiKey; $('#imgModel').value = settings.imgModel; $('#textModel').value = settings.textModel; $('#defHandle').value = settings.handle; $('#tone').value = settings.tone; $('#imgRes').value = settings.imgRes || '2K'; $('#extraRules').value = settings.extraRules; }
+$('#toggleSettings').onclick = () => { $('#settings').hidden = !$('#settings').hidden; fillSettings(); };
+$('#showKey').onclick = () => { const k = $('#apiKey'); k.type = k.type === 'password' ? 'text' : 'password'; $('#showKey').textContent = k.type === 'password' ? '보기' : '숨기기'; };
+function readSettings(){
+  settings.apiKey = $('#apiKey').value.replace(/[\s​-‍﻿"'`]/g, ''); settings.imgModel = $('#imgModel').value; settings.tone = $('#tone').value; settings.imgRes = $('#imgRes').value; settings.extraRules = $('#extraRules').value.trim(); settings.textModel =$('#textModel').value.trim() || 'gemini-3.8-flash';
+  const h = $('#defHandle').value.trim(); if (h !== settings.handle){ cards.forEach(c => { if (!c.handle || c.handle === settings.handle) c.handle = h; }); settings.handle = h; persist(); }
+  store.set('settings', settings);
+}
+$('#saveSettings').onclick = () => { readSettings(); const s = $('#settingsStatus'); s.className = 'status ok'; s.textContent = '저장했어요'; syncAll(); setTimeout(() => { if (settings.apiKey) $('#settings').hidden = true; }, 700); };
+$('#testKey').onclick = async () => {
+  readSettings(); const s = $('#settingsStatus'); s.className = 'status'; s.textContent = '확인 중…';
+  try{ const t = await gemText('"연결됨" 이라고만 답해.'); s.className = 'status ok'; s.textContent = '키가 작동해요 · ' + t.trim().slice(0, 20); }
+  catch(e){ s.className = 'status err'; s.textContent = e.message; }
+};
+
+// ---------- Gemini ----------
+function friendly(status, msg){
+  const m = msg || '';
+  if (!settings.apiKey) return 'API 키가 없어요. 위의 "설정 · API 키"에서 넣어주세요.';
+  if (/API key not valid|API_KEY_INVALID/i.test(m)) return 'API 키가 맞지 않아요. 설정에서 키를 다시 붙여넣어 주세요.';
+  if (status === 429 || /quota|RESOURCE_EXHAUSTED/i.test(m)) return '사용 한도를 넘었어요. 잠시 후 다시 하거나, AI Studio에서 결제(Billing) 설정을 확인해 주세요.';
+  if (status === 403) return '이 키로는 쓸 수 없는 기능이에요. AI Studio에서 결제 설정과 키 권한을 확인해 주세요. (' + m.slice(0,120) + ')';
+  if (status === 404) return '모델 이름을 찾을 수 없어요. 설정에서 모델을 바꿔보세요. (' + m.slice(0,80) + ')';
+  if (status === 0) return '제미나이 서버에 접속하지 못했어요. Claude 앱 안의 파일 미리보기에서 열었다면 인터넷이 막혀 있어요. 문서 › 카드뉴스 폴더에서 파일을 더블클릭해 크롬이나 엣지로 열어주세요.' + (m ? ' (' + m.slice(0, 80) + ')' : '');
+  return '제미나이 오류: ' + (m.slice(0,160) || ('코드 ' + status));
+}
+async function gemCall(model, body){
+  if (!settings.apiKey) throw Object.assign(new Error(friendly(-1,'')), {status:-1});
+  if (!/^[\x21-\x7e]+$/.test(settings.apiKey)) throw Object.assign(new Error('API 키에 한글이나 띄어쓰기 같은 다른 글자가 섞여 있어요. 설정에서 키 칸을 비우고 AI Studio에서 다시 복사해 붙여넣어 주세요.'), {status:-1});
+  let res;
+  try{ res = await fetch(API + encodeURIComponent(model) + ':generateContent', {method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':settings.apiKey}, body:JSON.stringify(body)}); }
+  catch(e){ throw Object.assign(new Error(friendly(0, e && e.message)), {status:0}); }
+  let data = null; try{ data = await res.json(); }catch(e){}
+  if (!res.ok){ const m = (data && data.error && data.error.message) || ''; throw Object.assign(new Error(friendly(res.status, m)), {status:res.status, raw:m}); }
+  const cand = data && data.candidates && data.candidates[0];
+  if (!cand || !cand.content){
+    const why = (data && data.promptFeedback && data.promptFeedback.blockReason) || (cand && cand.finishReason) || '';
+    throw Object.assign(new Error(/SAFETY|BLOCK|PROHIBITED/i.test(why) ? '제미나이가 이 내용은 만들 수 없다고 했어요. 다른 기사나 프롬프트로 시도해 주세요.' : '제미나이가 빈 답을 보냈어요. 다시 시도해 주세요.'), {status:200});
+  }
+  return cand.content.parts || [];
+}
+async function gemText(prompt, opts = {}){
+  const body = {contents:[{role:'user', parts:[{text:prompt}]}]};
+  if (opts.json) body.generationConfig = {responseMimeType:'application/json'};
+  if (opts.urlContext) body.tools = [{url_context:{}}];
+  const parts = await gemCall(settings.textModel, body);
+  return parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join('');
+}
+function parseJSON(t){
+  try{ return JSON.parse(t); }catch(e){}
+  const m = /```(?:json)?\s*([\s\S]*?)```/.exec(t); if (m){ try{ return JSON.parse(m[1]); }catch(e){} }
+  const a = t.indexOf('{'), b = t.lastIndexOf('}'); if (a >= 0 && b > a){ try{ return JSON.parse(t.slice(a, b+1)); }catch(e){} }
+  throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+}
+async function gemImage(prompt, aspect){
+  const AR = aspect || '4:5';
+  const text = prompt + '\n\nVertical ' + AR + ' composition for an Instagram ' + (AR === '9:16' ? 'Reels video background' : 'feed post') + '. Absolutely no text, letters, numbers, captions, logos or watermarks anywhere in the image. Keep the lower half of the frame calmer and darker so a headline can be placed over it. Do not depict the likeness of any real, identifiable person.';
+  const size = settings.imgRes === '1K' ? null : settings.imgRes || '2K';
+  const variants = [
+    ...(size ? [{responseModalities:['TEXT','IMAGE'], imageConfig:{aspectRatio:AR, imageSize:size}},
+                {responseModalities:['TEXT','IMAGE'], responseFormat:{image:{aspectRatio:AR, imageSize:size}}}] : []),
+    {responseModalities:['TEXT','IMAGE'], imageConfig:{aspectRatio:AR}},
+    {responseModalities:['TEXT','IMAGE'], responseFormat:{image:{aspectRatio:AR}}},
+    {responseModalities:['TEXT','IMAGE']}
+  ];
+  let lastErr;
+  const vKey = 'imgVariant_' + (size || '1K');
+  const start = Math.min(store.get(vKey, 0), variants.length - 1);
+  for (let v = start; v < variants.length; v++){
+    const gc = variants[v];
+    try{
+      const parts = await gemCall(settings.imgModel, {contents:[{role:'user', parts:[{text}]}], generationConfig:gc});
+      store.set(vKey, v);
+      const p = parts.find(p => (p.inlineData && p.inlineData.data) || (p.inline_data && p.inline_data.data));
+      if (!p) throw Object.assign(new Error('그림이 오지 않았어요. "제미나이로 다시 그리기"를 눌러보세요.'), {status:200});
+      const d = p.inlineData || p.inline_data;
+      return `data:${d.mimeType || d.mime_type || 'image/png'};base64,${d.data}`;
+    }catch(e){
+      lastErr = e;
+      if (!(e.status === 400 && /Unknown name|Invalid JSON|imageConfig|responseFormat|aspect|imageSize|image_size|size/i.test(e.raw || ''))) throw e;
+    }
+  }
+  throw lastErr;
+}
+
+const RULES = `규칙
+- 기사에 있는 사실만 쓴다. 숫자·이름·날짜를 바꾸거나 지어내지 않는다. 궁금증은 만들되 내용과 어긋나는 낚시나 허위 단정은 금지.
+- 기사 문장을 그대로 옮기지 말고 새 문장으로 쓴다.
+- 사건·사고 피해자를 조롱하거나 자극적으로 소비하지 않는다.`;
+const TOPIC_RULES = `규칙
+- 훈계·설교조 금지. 독자 옆에서 말하듯, 구체적인 장면이나 상황 하나로 시작한다.
+- 실존 인물이 했다는 명언을 지어내거나, 출처가 불확실한 명언을 쓰지 않는다. 고전 명언(논어, 세네카 등)은 출처가 확실할 때만 쓰고 출처를 함께 적는다. 그 외에는 채널의 목소리로 쓴다.
+- 현대 작가의 책 문장을 그대로 옮기지 않는다.
+- 건강·돈에 관한 구체적인 수치나 단정은 쓰지 않는다.
+- 40대부터 70대까지 함께 공감할 수 있게 쓴다.`;
+const rulesFor = c => c && c.mode === 'topic' ? TOPIC_RULES : RULES;
+function topicPrompt(topic){
+  const morning = settings.tone === 'morning';
+  const role = morning ? '너는 40~70대 독자에게 매일 아침 짧은 명상글을 건네는 에디터야. 아래 주제로 아침 명상 카드뉴스 재료를 만든다.' : '너는 40~70대 독자를 위한 인생 조언 카드뉴스 에디터야. 아래 주제로 한 장짜리 카드뉴스 재료를 만든다.';
+  const capGuide = morning
+    ? ` - explain(설명형): 오늘 아침 해볼 작은 것 3가지(• 기호, 예: 세 번 깊게 숨쉬기) → 따뜻한 마무리 한 줄
+ - empathy(공감형): 아침 장면 묘사 → 지금의 마음 → "오늘 아침, 여러분은 어떤가요?"로 마무리
+ - poll(투표형): 아침 습관 두 가지 중 고르기 👍/👎 → "댓글로 알려주세요"`
+    : ` - explain(설명형): 왜 그런지 → 오늘 해볼 수 있는 작은 실천 3가지(• 기호) → 마무리 한 줄
+ - empathy(공감형): 구체적인 장면 → 그때의 마음 → "여러분은 어떠세요?" 같은 질문으로 마무리
+ - poll(투표형): 짧은 고민 상황 → 👍/👎 두 선택지 → "댓글로 의견 남겨주세요"로 마무리`;
+  const imgGuide = morning ? '이른 아침 햇살, 창가, 찻잔, 이슬, 숲길, 잔잔한 물가처럼 고요한 아침 장면' : '주제를 상징하는 조용한 장면(뒷모습, 손, 창가, 길, 사물, 풍경)';
+  return `${role}
+
+${TOPIC_RULES}
+
+${styleRules()}
+- 이 말투를 제목·sub·본문 3종 모두에 적용한다.
+
+${TITLE_RULES}
+- titles 는 정확히 5개.
+
+sub: 제목 아래 보조 한 줄, 30자 이내 (대괄호 없이). 첫 번째 제목에 맞춰 쓴다. 제목을 반복하거나 비슷한 말로 바꿔 쓰지 않는다. 제목이 만든 궁금증에 대한 답(구체적인 이유, 방법, 숫자, 결과)을 준다. 예) 제목 "혼자여도 불안하지 않은 그들의 비밀" → "매일의 루틴과 연락할 친구 셋, 그게 전부였어요"
+tag: 꼬리표 2~6자 (예: ${morning ? '아침명상, 오늘의 숨, 좋은아침' : '인생조언, 관계, 노후, 마음, 습관'})
+keyword: 핵심 단어 1~4자
+palette: 차분하고 따뜻한 분위기의 HEX 3색. bg1, bg2 는 흰 글씨가 잘 읽히는 어두운 색, accent 는 밝은 포인트색.
+image_prompt: 배경 그림용 영어 프롬프트. ${imgGuide}. 사람 얼굴은 보이지 않게. 사진풍, 2~3문장. 글자 없음.
+source: 고전 명언을 인용했다면 그 출처(예: 논어 위정편), 아니면 "".
+captions: 인스타 본문 3종, 각 250~450자, 짧은 문단과 줄바꿈, 이모지 1~3개.
+${capGuide}
+ - 고전을 인용했을 때만 마지막 줄에 "출처: ○○"
+hashtags: 8~12개, # 포함, 한국어 위주.
+
+JSON 하나만 출력:
+{"titles":["..."],"sub":"...","tag":"...","keyword":"...","palette":{"bg1":"#2B2238","bg2":"#4A3F5C","accent":"#F2C27B"},"image_prompt":"...","source":"","captions":{"explain":"...","empathy":"...","poll":"..."},"hashtags":["#..."]}
+
+주제:
+<<<
+${topic}
+>>>`;
+}
+const TITLE_RULES = `제목: 이미지 위에 크게 들어가는 문구.
+- 각 14~26자, 2줄. 줄을 나눌 곳에 \\n 을 넣는다.
+- 가장 중요한 단어 하나를 [대괄호]로 감싼다.
+- 서로 다른 훅을 쓴다: 결과·핵심 먼저 / 숫자 / 질문 / 반전·의외성 / 독자 입장(나에게 무슨 영향?)`;
+function mainPrompt(article, url){
+  return `너는 인스타그램 카드뉴스 에디터야. 아래 기사(또는 대본·주제 글)로 한 장짜리 카드뉴스 재료를 만든다.
+
+${RULES}
+
+${styleRules()}
+- 이 말투를 제목·sub·본문 3종 모두에 적용한다.
+
+${TITLE_RULES}
+- titles 는 정확히 5개.
+
+sub: 제목 아래 보조 한 줄, 35자 이내 (대괄호 없이). 첫 번째 제목에 맞춰, 그 제목을 뒷받침하는 기사 속 핵심 사실(누가·얼마·언제·무엇)을 한 줄로 쓴다. 제목을 반복하거나 비슷한 말로 바꿔 쓰지 않는다. 기사에 없는 내용은 쓰지 않는다. 예) 제목 "집행률 고작 6.6%" → "업무분담 지원금 251억 중 실제 쓴 돈은 16억뿐"
+tag: 카테고리 꼬리표 2~6자 (예: 사회, 경제, 생활정보, 이슈, 국제)
+keyword: 핵심 단어 1~4자
+palette: 기사 분위기에 맞는 HEX 3색. bg1, bg2 는 흰 글씨가 잘 읽히는 어두운 색, accent 는 밝은 포인트색.
+image_prompt: 배경 그림을 만들 영어 프롬프트. 기사 장면을 상징적으로 보여주는 사진풍 장면, 구체적인 사물·장소·빛·분위기 묘사, 2~3문장. 글자 없음.
+source: 기사 언론사명 (모르면 "").
+captions: 인스타 본문 3종, 각 250~450자, 짧은 문단과 줄바꿈, 이모지 2~4개.
+ - explain(설명형): 무슨 일인지 → 핵심 3가지(• 기호) → 앞으로 볼 점
+ - empathy(공감형): 독자가 느낄 감정으로 시작 → 상황 설명 → 공감 질문으로 마무리
+ - poll(투표형): 쟁점을 짧게 설명 → 👍/👎 두 선택지 → "댓글로 의견 남겨주세요"로 마무리
+ - 세 본문 모두 마지막 줄은 "출처: 언론사명" (모르면 "출처: 기사 원문")
+hashtags: 8~12개, # 포함, 한국어 위주.
+
+JSON 하나만 출력:
+{"titles":["..."],"sub":"...","tag":"...","keyword":"...","palette":{"bg1":"#0E1B3D","bg2":"#1F4E79","accent":"#4FD1C5"},"image_prompt":"...","source":"...","captions":{"explain":"...","empathy":"...","poll":"..."},"hashtags":["#..."]}
+
+기사 링크(참고): ${url || '없음'}
+기사 본문:
+"""
+${article}
+"""`;
+}
+function cleanTitles(arr){ return Array.isArray(arr) ? arr.filter(t => typeof t === 'string' && t.trim()).map(t => t.replace(/\\n/g, '\n').trim()).slice(0,5) : []; }
+
+function setBusy(i, on, msg){
+  runtime[i].busy = on; cards[i].msg = msg || '';
+  if (i === active){ syncVeil(); syncStatus(); }
+  renderTabs();
+}
+async function generate(i){
+  const c = cards[i];
+  if (runtime[i].busy) return;
+  if (!settings.apiKey){ $('#settings').hidden = false; fillSettings(); c.status = 'err'; c.msg = 'API 키를 먼저 넣어주세요.'; if (i === active) syncStatus(); return; }
+  const topicMode = c.mode === 'topic';
+  if (topicMode ? c.article.trim().length < 4 : (!c.url.trim() && c.article.trim().length < 80)){ c.status = 'err'; c.msg = topicMode ? '주제나 하고 싶은 이야기를 한 줄 이상 적어주세요.' : '기사 링크를 넣거나 본문을 붙여넣어 주세요.'; if (i === active) syncStatus(); renderTabs(); return; }
+  try{
+    let article = c.article.trim();
+    if (!topicMode && article.length < 80){
+      setBusy(i, true, '링크에서 기사 읽는 중…');
+      const t = await gemText(`다음 링크의 뉴스 기사를 열어서 기사 제목과 본문만 그대로 출력해. 설명이나 요약은 붙이지 마. 기사를 열 수 없으면 정확히 "읽기실패" 라고만 답해.\n\n${c.url.trim()}`, {urlContext:true});
+      if (!t || /읽기실패/.test(t) || t.trim().length < 80) throw new Error('이 링크는 읽지 못했어요. 기사 본문을 복사해서 붙여넣어 주세요.');
+      article = t.trim(); c.article = article; if (i === active) $('#article').value = article;
+    }
+    setBusy(i, true, '제목 · 본문 쓰는 중…');
+    const d = parseJSON(await gemText(topicMode ? topicPrompt(article.slice(0, 15000)) : mainPrompt(article.slice(0, 15000), c.url.trim()), {json:true}));
+    const titles = cleanTitles(d.titles); if (!titles.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+    c.titles = titles; c.title = titles[0]; c.reelTitles = []; c.list = null;
+    if (typeof d.sub === 'string') c.sub = d.sub.replace(/[\[\]［］【】〔〕]/g, '');
+    if (typeof d.tag === 'string') c.tag = d.tag;
+    if (typeof d.keyword === 'string') c.keyword = d.keyword.slice(0, 6);
+    if (d.palette && isHex(d.palette.bg1) && isHex(d.palette.bg2) && isHex(d.palette.accent)) c.aiPalette = {bg1:d.palette.bg1, bg2:d.palette.bg2, accent:d.palette.accent};
+    if (typeof d.image_prompt === 'string') c.imagePrompt = d.image_prompt;
+    c.source = (typeof d.source === 'string' && d.source.trim()) ? '출처: ' + d.source.trim() : (topicMode ? '' : '출처: 기사 원문');
+    const cp = d.captions || {}; ['explain','empathy','poll'].forEach(k => { if (typeof cp[k] === 'string') c.captions[k] = cp[k]; });
+    if (Array.isArray(d.hashtags)) c.hashtags = d.hashtags.filter(h => typeof h === 'string').map(h => h.startsWith('#') ? h : '#' + h).join(' ');
+    c.status = 'done'; c.bgMode = runtime[i].photo ? c.bgMode : 'auto'; runtime[i].bgKey = '';
+    persist();
+    if (settings.autoImg) { if (i === active) syncAll(); await drawAI(i, true); }
+    else { runtime[i].busy = false; c.msg = ''; if (i === active) syncAll(); else renderTabs(); }
+  }catch(e){
+    c.status = c.titles.length ? 'done' : 'err'; c.msg = e.message || '알 수 없는 오류가 났어요.';
+    runtime[i].busy = false; persist();
+    if (i === active){ syncAll(); const s = $('#genStatus'); s.className = 'status err'; s.textContent = c.msg; }
+    else renderTabs();
+    if (c.titles.length) toast(`카드 ${i+1}: ${c.msg}`);
+  }
+}
+async function drawAI(i, fromGenerate){
+  const c = cards[i];
+  if (!c.imagePrompt.trim()){ toast('그림 프롬프트가 없어요. 먼저 카드를 만들어 주세요.'); return; }
+  setBusy(i, true, '제미나이가 배경 그리는 중… (10~40초)');
+  try{
+    const url = await gemImage(c.imagePrompt);
+    const img = await loadImage(url);
+    await setPhotoFromImage(i, img);
+    setBusy(i, false, '');
+    if (i === active){ syncStatus(); syncSeg('bgSeg','photo'); }
+  }catch(e){
+    setBusy(i, false, '');
+    c.msg = '그림은 못 만들었어요: ' + e.message + ' 자동 디자인 배경으로 대신 보여줘요.';
+    if (fromGenerate){ c.bgMode = runtime[i].photo ? 'photo' : 'auto'; }
+    persist();
+    if (i === active){ syncAll(); const s = $('#genStatus'); s.className = 'status err'; s.textContent = c.msg; }
+    toast(`카드 ${i+1}: 그림 생성 실패`);
+  }
+}
+async function generateAll(){
+  const ready = i => cards[i].mode === 'topic' ? cards[i].article.trim().length >= 4 : (cards[i].url.trim() || cards[i].article.trim().length >= 80);
+  const targets = cards.map((c, i) => i).filter(i => ready(i) && cards[i].status !== 'done');
+  const list = targets.length ? targets : cards.map((c, i) => i).filter(ready);
+  if (!list.length){ toast('카드 탭을 눌러 각 카드에 기사를 먼저 넣어주세요.'); return; }
+  for (const i of list) await generate(i);
+  toast('모두 끝났어요. 카드별로 제목을 고르고 저장하세요.');
+}
+$('#genBtn').onclick = () => generate(active);
+$('#redrawAI').onclick = () => drawAI(active, false);
+$('#moreTitles').onclick = async () => {
+  const c = C(), s = $('#titleStatus'), i = active;
+  if (!c.article.trim()){ s.textContent = '먼저 카드를 만들어 주세요.'; return; }
+  $('#moreTitles').disabled = true; s.className = 'status'; s.textContent = '새 제목 쓰는 중…';
+  try{
+    const d = parseJSON(await gemText(`너는 인스타그램 카드뉴스 에디터야. 아래 글로 새 제목 5개를 쓴다.\n\n${rulesFor(c)}\n\n${styleRules()}\n\n${TITLE_RULES}\n- 기존 제목과 겹치지 않게 새 각도로 쓴다.\n기존 제목: ${JSON.stringify(c.titles)}\n\nJSON 하나만 출력: {"titles":["...","...","...","...","..."]}\n\n기사 본문:\n"""\n${c.article.slice(0,15000)}\n"""`, {json:true}));
+    const t = cleanTitles(d.titles); if (!t.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+    cards[i].titles = t; cards[i].reelTitles = picksOf(cards[i]).filter(x => t.includes(x.title)); persist(); if (i === active) renderChips(); s.textContent = '';
+  }catch(e){ s.className = 'status err'; s.textContent = e.message; }
+  finally{ $('#moreTitles').disabled = false; }
+};
+
+// ---------- reels ----------
+const RW = 1080, RH = 1920;
+const reelCv = $('#reelCv'), rctx = reelCv.getContext('2d');
+const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodSize:56, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
+const plainT = t => String(t || '').replace(/[\[\]［］【】〔〕]/g, '').replace(/\s*\n\s*/g, ' ').trim();
+function narrOf(x){ if (x.narr != null) return x.narr; const end = t => /[.?!。？！]$/.test(t) ? t : t + '.'; return [plainT(x.title), plainT(x.sub)].filter(Boolean).map(end).join(' '); }
+function listOf(c){
+  if (!c.list) c.list = {label:'', hook:'', count:3, items:[], closing:{text:''}, cover:{}, ver:0};
+  const L = c.list; if (!L.closing) L.closing = {text:''}; if (!L.cover) L.cover = {}; if (!Array.isArray(L.items)) L.items = [];
+  return L;
+}
+const sceneImgs = new Map(), sceneImgLoading = new Set();
+function sceneBgOf(sc){
+  const k = sc && sc.imgKey; if (!k) return null;
+  const im = sceneImgs.get(k); if (im) return im;
+  if (!sceneImgLoading.has(k)){ sceneImgLoading.add(k); idb.get(k).then(u => u ? loadImage(u) : null).then(im2 => { if (im2){ sceneImgs.set(k, im2); if (!playing) showStill(); } }).catch(() => {}).finally(() => sceneImgLoading.delete(k)); }
+  return null;
+}
+async function ensureSceneImgs(){
+  for (const sc of reelScenes){ if (sc.imgKey && !sceneImgs.has(sc.imgKey)){ try{ const u = await idb.get(sc.imgKey); if (u) sceneImgs.set(sc.imgKey, await loadImage(u)); }catch(e){} } }
+}
+function imgToJpeg(img, q){ const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); return c.toDataURL('image/jpeg', q || 0.92); }
+async function setSceneImg(ref, img){
+  const key = 's' + Date.now() + Math.floor(Math.random() * 1000);
+  const url = imgToJpeg(img, 0.92);
+  await idb.put(key, url);
+  if (ref.imgKey) idb.del(ref.imgKey);
+  if (ref.vidKey){ idb.del(ref.vidKey); ref.vidKey = null; }
+  ref.imgKey = key; sceneImgs.set(key, await loadImage(url)); persist();
+}
+function estSecs(text){ const n = Array.from(String(text || '').replace(/\s+/g, '')).length; const isJ = /[぀-ヿ]/.test(text || ''); const cps = (reel.cps || 6.5) * (isJ ? 1.25 : 1); return Math.max(3, Math.round((n / cps + 1.4) * 2) / 2); }
+const JA_FONTS = [['njp','Noto Sans JP Black','Noto Sans JP',900],['dela','Dela Gothic One · 굵은 제목체','Dela Gothic One',400],['mplus','M PLUS Rounded · 둥근 글씨','M PLUS Rounded 1c',800],['zen','Zen Maru Gothic · 부드러운','Zen Maru Gothic',700],['nsj','Noto Serif JP · 명조','Noto Serif JP',900]];
+const isJa = () => reel.lang === 'ja';
+const jaF = () => { const f = JA_FONTS.find(x => x[0] === reel.jaFont) || JA_FONTS[0]; return {fam:f[2], w:f[3]}; };
+function titleSpecR(c, px){ if (!isJa()) return fontSpec(c, px); const f = jaF(); return `${f.w} ${px}px "${f.fam}", "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif`; }
+function subSpecR(c, px){ return isJa() ? `700 ${px}px "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif` : subFontSpec(c, px, true); }
+const tagSpecR = px => isJa() ? `700 ${px}px "Noto Sans JP", "Yu Gothic", sans-serif` : `700 ${px}px "Noto Sans KR", "Malgun Gothic", sans-serif`;
+function jaOf(c){ return (c && c.ja) || null; }
+function lumOf(hex){ const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 1; const n = parseInt(m[1], 16); const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(n >> 16 & 255) + 0.7152 * f(n >> 8 & 255) + 0.0722 * f(n & 255); }
+function fxShade(c){ return lumOf(c.color) < 0.35 ? '255,255,255' : '0,0,0'; }
+function fxSet(g, c, fs, o){
+  const O = o || reel, m = O.fx, k = (O.fxStr == null ? 60 : O.fxStr) / 100, rgb = fxShade(c);
+  g.shadowOffsetX = 0;
+  if (m === 'soft'){ g.shadowColor = `rgba(${rgb},${0.3 + 0.45 * k})`; g.shadowBlur = fs * (0.12 + 0.3 * k); g.shadowOffsetY = fs * 0.04; }
+  else if (m === 'strong'){ g.shadowColor = `rgba(${rgb},${0.65 + 0.35 * k})`; g.shadowBlur = fs * (0.06 + 0.14 * k); g.shadowOffsetY = fs * 0.06; }
+  else { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; }
+}
+function fxText(g, c, text, x, y, fs, o){
+  const O = o || reel, k = (O.fxStr == null ? 60 : O.fxStr) / 100;
+  if (O.fx === 'outline'){
+    g.save(); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.lineJoin = 'round'; g.miterLimit = 2;
+    g.lineWidth = fs * (0.05 + 0.11 * k); g.strokeStyle = `rgba(${fxShade(c)},${0.75 + 0.25 * k})`; g.strokeText(text, x, y); g.restore();
+  }
+  g.fillText(text, x, y);
+  if (O.fx === 'strong') g.fillText(text, x, y);
+}
+const cardFx = c => ({fx:c.fx || 'soft', fxStr:c.fxStr == null ? 55 : c.fxStr});
+function setLS(g, px){ if ('letterSpacing' in g) g.letterSpacing = (px || 0) + 'px'; }
+let bgmUrl = '', bgmLabel = '', playing = null;
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const easeOut = x => 1 - Math.pow(1 - clamp01(x), 3);
+function popScale(x){ if (x <= 0 || x >= 1) return 1; return x < 0.45 ? 1 + 0.2 * easeOut(x / 0.45) : 1.2 - 0.2 * easeOut((x - 0.45) / 0.55); }
+
+function reelPlan(sc, D){
+  const c = cards[sc.i];
+  rctx.font = titleSpecR(c, reel.titleSize); setLS(rctx, c.letterSp);
+  const maxW = RW * (0.84 - Math.max(0, reel.offX || 0) - Math.max(0, -(reel.offX || 0)));
+  const lines = layout(rctx, sc.title || '', maxW);
+  setLS(rctx, 0);
+  const nChars = lines.reduce((n, l) => n + l.length, 0);
+  const tagAt = 0.3, lineStart = 0.8, step = 0.45;
+  const typeDur = Math.max(0.6, Math.min(nChars * 0.075, D - 2.4));
+  const linesEnd = reel.anim === 'type' ? lineStart + typeDur + 0.1 : lineStart + Math.max(0, lines.length - 1) * step + 0.5;
+  rctx.font = subSpecR(c, reel.subSize);
+  const subText = (sc.sub == null ? c.sub : sc.sub) || '';
+  const subLines = subText.trim() ? layout(rctx, subText.replace(/[\[\]［］【】〔〕]/g, ''), maxW) : [];
+  const popAt = linesEnd + 0.15;
+  const subAt = popAt + 0.45;
+  const endAt = sc.end ? Math.max(subAt + 0.8, D - 2.4) : Infinity;
+  return {lines, nChars, typeDur, subLines, subText, maxW, tagAt, lineStart, step, popAt, subAt, endAt};
+}
+function drawReel(g, sc, t, D, plan){
+  const i = sc.i, c = cards[i], p = plan || reelPlan(sc, D);
+  g.save(); g.clearRect(0, 0, RW, RH); g.fillStyle = '#000'; g.fillRect(0, 0, RW, RH);
+  // background: cover 1080x1350 into 1080x1920 with slow motion
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  const bg = sceneBgOf(sc) || buildBg(i), k = t / D;
+  const base = Math.max(RW / bg.width, RH / bg.height);
+  const m = reel.motion;
+  const zoom = m === 'pan' ? 1.14 : (m === 'zoom' ? 1 + 0.12 * k : 1.06 + 0.08 * k);
+  const s = base * zoom, w = bg.width * s, h = bg.height * s;
+  const room = w - RW;
+  const dir = sc.n % 2 ? -1 : 1;
+  const panX = m === 'zoom' ? 0 : dir * room * 0.45 * (k - 0.5) * 2 * (m === 'pan' ? 1 : 0.6);
+  g.drawImage(bg, (RW - w) / 2 + panX, (RH - h) / 2, w, h);
+  // shade
+  if (c.shade > 0){ const sg = g.createLinearGradient(0, RH * 0.3, 0, RH); sg.addColorStop(0, 'rgba(0,0,0,0)'); sg.addColorStop(1, `rgba(0,0,0,${Math.min(0.95, c.shade + 0.1)})`); g.fillStyle = sg; g.fillRect(0, 0, RW, RH); }
+  const left = RW * 0.08 + (reel.offX || 0) * RW, fs = reel.titleSize, lh = fs * (c.lineH || 1.24);
+  const sfs = reel.subSize, slh = Math.round(sfs * 1.38);
+  const blockH = p.lines.length * lh;
+  const subH = p.subLines.length ? fs * 0.25 + p.subLines.length * slh : 0;
+  const autoTop = Math.max(RH * 0.18, Math.min(RH * 0.52, RH - 470 - blockH - subH));
+  const top = Math.max(140, Math.min(RH - 260 - blockH - subH - (reel.gap || 0), autoTop + (reel.offY || 0) * RH));
+  g.textBaseline = 'top';
+  // tag
+  const J = isJa() ? jaOf(c) : null;
+  const tagText = sc.tag != null ? sc.tag : ((J && J.tag) || c.tag), srcText = J ? (J.source != null ? J.source : '') : c.source;
+  if (tagText.trim() && t >= p.tagAt){
+    const a = easeOut((t - p.tagAt) / 0.4);
+    g.globalAlpha = a;
+    g.font = tagSpecR(38);
+    const tw = g.measureText(tagText).width, pw = tw + 56, ph = 64;
+    const tx = c.align === 'center' ? left + (p.maxW - pw) / 2 : left, ty = top - ph - 34 + (1 - a) * 30;
+    g.fillStyle = c.hi; rr(g, tx, ty, pw, ph, 32); g.fill();
+    g.fillStyle = '#111318'; g.fillText(tagText, tx + 28, ty + 10);
+    g.globalAlpha = 1;
+  }
+  // optional backdrop box behind text
+  if (reel.fx === 'box' && t >= p.lineStart - 0.2){
+    const k = (reel.fxStr == null ? 60 : reel.fxStr) / 100;
+    g.save(); g.font = titleSpecR(c, fs); setLS(g, c.letterSp);
+    let wMax = 0; for (const line of p.lines){ wMax = Math.max(wMax, g.measureText(strOf(line)).width); }
+    setLS(g, 0); g.font = subSpecR(c, sfs);
+    for (const line of p.subLines){ wMax = Math.max(wMax, g.measureText(strOf(line)).width); }
+    const pad = Math.round(fs * 0.38), bw = Math.min(RW - 40, wMax + pad * 2);
+    const bx = c.align === 'center' ? left + (p.maxW - wMax) / 2 - pad : left - pad;
+    const bh = blockH + (p.subLines.length ? fs * 0.25 + (reel.gap || 0) + p.subLines.length * slh : 0) + pad * 1.6;
+    g.globalAlpha = easeOut((t - p.lineStart + 0.2) / 0.5);
+    g.fillStyle = `rgba(${fxShade(c)},${0.3 + 0.45 * k})`; rr(g, Math.max(16, bx), top - pad * 0.8, bw, bh, Math.round(fs * 0.22)); g.fill();
+    g.restore();
+  }
+  // title lines
+  g.font = titleSpecR(c, fs); setLS(g, c.letterSp);
+  fxSet(g, c, fs);
+  const popK = (t - p.popAt) / 0.5;
+  const typing = reel.anim === 'type';
+  let shown = typing ? Math.floor(clamp01((t - p.lineStart) / p.typeDur) * p.nChars) : Infinity;
+  if (typing && t < p.lineStart) shown = 0;
+  let cursor = null, before = 0;
+  p.lines.forEach((line, li) => {
+    let a = 1, yOff = 0;
+    if (!typing){
+      const st = p.lineStart + li * p.step;
+      if (t < st) return;
+      a = easeOut((t - st) / 0.5); yOff = (1 - a) * 46;
+    }
+    const runs = runsOf(line); const total = runs.reduce((sum, r) => sum + g.measureText(r.t).width, 0);
+    let x = c.align === 'center' ? left + (p.maxW - total) / 2 : left;
+    const y = top + li * lh + yOff;
+    let left2 = typing ? Math.max(0, shown - before) : Infinity;
+    before += line.length;
+    if (typing && left2 <= 0){ if (!cursor) cursor = {x, y}; return; }
+    g.globalAlpha = a;
+    for (const r of runs){
+      if (left2 <= 0) break;
+      const part = typing ? Array.from(r.t).slice(0, left2).join('') : r.t;
+      left2 -= Array.from(r.t).length;
+      const rw = g.measureText(part).width;
+      if (r.hi && part === r.t){
+        const sc = popScale(popK);
+        g.save(); g.translate(x + rw / 2, y + fs / 2); g.scale(sc, sc);
+        g.fillStyle = c.hi; fxText(g, c, part, -rw / 2, -fs / 2, fs); g.restore();
+      } else { g.fillStyle = r.hi ? c.hi : c.color; fxText(g, c, part, x, y, fs); }
+      x += rw;
+    }
+    if (typing) cursor = {x, y};
+  });
+  if (typing && cursor && t < p.popAt + 0.3 && Math.floor(t * 2.4) % 2 === 0){
+    g.globalAlpha = 1; g.fillStyle = c.hi; g.fillRect(cursor.x + fs * 0.06, cursor.y + fs * 0.08, Math.max(4, fs * 0.06), fs * 0.95);
+  }
+  g.globalAlpha = 1;
+  // sub line for this scene
+  setLS(g, 0);
+  if (p.subLines.length && t >= p.subAt){
+    const a = easeOut((t - p.subAt) / 0.6);
+    g.globalAlpha = a;
+    let y = top + blockH + fs * 0.25 + (reel.gap || 0) + (1 - a) * 24;
+    g.font = subSpecR(c, sfs); g.fillStyle = hexA(c.color, 0.95);
+    fxSet(g, c, sfs);
+    for (const line of p.subLines){ const tx = strOf(line), tw = g.measureText(tx).width; fxText(g, c, tx, c.align === 'center' ? left + (p.maxW - tw) / 2 : left, y, sfs); y += slh; }
+    g.globalAlpha = 1;
+  }
+  // ending: account + source (last scene only)
+  if (t >= p.endAt){
+    const a = easeOut((t - p.endAt) / 0.6);
+    g.globalAlpha = a;
+    g.shadowBlur = 0; g.shadowOffsetY = 0;
+    g.textBaseline = 'alphabetic';
+    if (c.handle.trim()){ g.font = '700 40px "Noto Sans KR", "Malgun Gothic", sans-serif'; g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.fillText(c.handle, RW / 2, RH - 230); }
+    if (srcText.trim()){ g.font = isJa() ? '500 28px "Noto Sans JP", "Yu Gothic", sans-serif' : '500 28px "Noto Sans KR", "Malgun Gothic", sans-serif'; g.fillStyle = 'rgba(255,255,255,0.65)'; g.textAlign = 'center'; g.fillText(srcText, RW / 2, RH - 180); }
+    g.textAlign = 'left'; g.globalAlpha = 1;
+  }
+  g.restore();
+}
+function reelList(){
+  let l;
+  if (reel.scope === 'all'){ const ids = cards.map((c, i) => i).filter(i => cards[i].status === 'done'); l = (ids.length ? ids : [active]).map(i => ({i, title:cards[i].title, sub:cards[i].sub, end:true})); }
+  else if (reel.scope === 'titles' && picksOf(C()).length){ const ts = picksOf(C()); l = ts.map((x, k) => ({i:active, title:x.title, sub:x.sub, end:k === ts.length - 1, narr:narrOf(x), secs:x.secs, imgKey:x.imgKey})); }
+  else if (reel.scope === 'mood'){
+    const c0 = C(), M = moodOf(c0);
+    const src = M.lines.length ? M.lines : [{text:plainT(c0.title) || '', sub:''}];
+    l = src.map(ln => ({i:active, title:ln.text || '', sub:ln.sub || '', kind:'mood', ref:ln, narr:narrOf({title:ln.text, sub:ln.sub, narr:ln.narr}), secs:ln.secs, imgKey:ln.imgKey, vidKey:ln.vidKey, tag:''}));
+    l[l.length - 1].end = true;
+  }
+  else if (reel.scope === 'list'){
+    const c0 = C(), L = listOf(c0);
+    const mk = (ref, title, sub, extra) => Object.assign({i:active, title, sub, ref, narr:narrOf({title, sub, narr:ref.narr}), secs:ref.secs, imgKey:ref.imgKey}, extra || {});
+    l = [mk(L.cover, c0.title, L.hook, {kind:'cover'})];
+    L.items.forEach((it, k) => l.push(mk(it, it.head || '', it.body || '', {kind:'item', num:k + 1, tag:((L.label || '') + ' ' + (k + 1)).trim()})));
+    if (L.closing && (L.closing.text || '').trim()) l.push(mk(L.closing, L.closing.text, '', {kind:'closing', tag:''}));
+    l[l.length - 1].end = true;
+  }
+  else l = [{i:active, title:C().title, sub:C().sub, end:true}];
+  if (isJa()){
+    l.forEach(x => {
+      const J = jaOf(cards[x.i]);
+      x.jaMissing = !J || !J.map || !J.map[x.title];
+      if (J && x.kind === 'item') x.tag = ((J.label || listOf(cards[x.i]).label || '') + ' ' + x.num).trim();
+      if (J && J.map && J.map[x.title]){ x.sub = J.subMap && J.subMap[x.title + '§' + (x.sub || '')] != null ? J.subMap[x.title + '§' + (x.sub || '')] : (J.map[x.title + '§sub'] || x.sub); x.title = J.map[x.title]; if (x.narr != null) x.narr = [plainT(x.title), plainT(x.sub)].filter(Boolean).join('。') + '。'; }
+    });
+  }
+  const extra = l.length > 1 ? 2 : 0;
+  return l.map((x, n) => {
+    let d = reel.dur;
+    if (x.secs) d = Number(x.secs);
+    else if (reel.durMode === 'narr' && x.narr) d = estSecs(x.narr);
+    if (x.kind === 'mood' && !x.secs) d = Math.max(d, 5);
+    return Object.assign(x, {n, dur: d + (n === l.length - 1 ? extra : 0)});
+  });
+}
+function drawTimeline(T){
+  const list = reelScenes; let idx = 0, acc = 0; while (idx < list.length - 1 && T >= acc + list[idx].dur){ acc += list[idx].dur; idx++; } const D = list[idx].dur, t = T - acc;
+  const scn = reelScenes[idx];
+  if (scn && scn.kind === 'mood') drawMood(rctx, scn, t, D); else drawReel(rctx, scn, t, D, reelPlanCache[idx]);
+  // fade between scenes and at the very end
+  const FD = scn && scn.kind === 'mood' ? 0.7 : 0.35;
+  const fadeIn = idx > 0 ? clamp01(t / FD) : (scn && scn.kind === 'mood' ? clamp01(t / 0.5) : 1), fadeOut = clamp01((D - t) / FD);
+  const f = Math.min(fadeIn, fadeOut);
+  if (f < 1){ rctx.fillStyle = `rgba(0,0,0,${1 - f})`; rctx.fillRect(0, 0, RW, RH); }
+}
+let reelPlanCache = [], reelScenes = [];
+function prepPlans(){ reelScenes = reelList(); reelPlanCache = reelScenes.map(sc => reelPlan(sc, sc.dur)); syncPickList(); }
+const reelTotal = () => reelScenes.reduce((a, sc) => a + sc.dur, 0);
+let pickKey = '';
+function narrRowEl(ref, k, title, sub){
+  const frag = document.createDocumentFragment();
+  if (reel.durMode !== 'narr') return frag;
+  const nr = document.createElement('textarea'); nr.rows = 2; nr.id = 'pkNarr' + k; nr.className = 'pk-narr'; nr.value = narrOf({title, sub, narr:ref.narr}); nr.setAttribute('aria-label', '장면 ' + (k + 1) + ' 내레이션');
+  nr.placeholder = '이 장면에서 목소리로 읽을 문장';
+  nr.addEventListener('input', () => { ref.narr = nr.value; persist(); if (!playing){ showStill(); refreshSecs(); } });
+  const sw = document.createElement('div'); sw.className = 'pk-secs';
+  const sl = document.createElement('label'); sl.htmlFor = 'pkSecs' + k; sl.textContent = '장면 길이(초)';
+  const si = document.createElement('input'); si.type = 'number'; si.min = '2'; si.max = '30'; si.step = '0.5'; si.id = 'pkSecs' + k; si.value = ref.secs || '';
+  si.addEventListener('input', () => { const v = parseFloat(si.value); ref.secs = v > 0 ? v : null; persist(); if (!playing){ showStill(); refreshSecs(); } });
+  const sh = document.createElement('span'); sh.className = 'pk-ja'; sh.textContent = '비우면 내레이션 길이로 자동';
+  sw.append(sl, si, sh); frag.append(nr, sw);
+  return frag;
+}
+function imgRowEl(ref, k, sceneText, allowVideo){
+  const row = document.createElement('div'); row.className = 'pk-img';
+  const th = document.createElement('div'); th.className = 'pk-thumb';
+  const paint = () => { const im = ref.imgKey && sceneImgs.get(ref.imgKey); th.style.backgroundImage = im ? `url(${im.src})` : ''; th.textContent = ref.vidKey ? '영상' : ref.imgKey ? (im ? '' : '…') : '기본'; };
+  paint(); if (ref.imgKey && !sceneImgs.get(ref.imgKey)) idb.get(ref.imgKey).then(u => { if (u) loadImage(u).then(im => { sceneImgs.set(ref.imgKey, im); paint(); }); });
+  const st = document.createElement('span'); st.className = 'status';
+  const draw = document.createElement('button'); draw.type = 'button'; draw.className = 'small'; draw.textContent = '이 장면 그림 그리기';
+  draw.onclick = async () => {
+    const c = C(); draw.disabled = true; st.className = 'status'; st.textContent = '그리는 중… (10~40초)';
+    try{
+      const base = allowVideo ? 'Quiet, elegant, cinematic photograph with soft natural light and a refined, calm mood. Faceless: show hands, a back view, objects or scenery only. Muted, warm film-like colors.' : (c.imagePrompt || 'A calm, cinematic photo that matches the topic.');
+      const url = await gemImage(`${base}\n\nThis particular scene is about: "${plainT(sceneText)}". Use a different composition and subject from other scenes of the same video, but keep the same mood and color tone.`, '9:16');
+      await setSceneImg(ref, await loadImage(url)); paint(); st.textContent = ''; if (!playing) showStill();
+    }catch(e){ st.className = 'status err'; st.textContent = e.message; }
+    finally{ draw.disabled = false; }
+  };
+  const up = document.createElement('button'); up.type = 'button'; up.className = 'small'; up.textContent = '사진';
+  const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.className = 'hidden-file';
+  up.onclick = () => fi.click();
+  fi.addEventListener('change', async () => { const f = fi.files && fi.files[0]; fi.value = ''; if (!f) return; try{ await setSceneImg(ref, await loadImage(URL.createObjectURL(f))); paint(); if (!playing) showStill(); }catch(e){ st.className = 'status err'; st.textContent = '이 사진은 열 수 없어요.'; } });
+  const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'small'; rm.textContent = '기본 배경';
+  rm.onclick = () => { if (ref.imgKey) idb.del(ref.imgKey); ref.imgKey = null; if (ref.vidKey){ idb.del(ref.vidKey); ref.vidKey = null; } persist(); paint(); if (!playing) showStill(); };
+  if (allowVideo){
+    const vb = document.createElement('button'); vb.type = 'button'; vb.className = 'small'; vb.textContent = '영상';
+    const vf = document.createElement('input'); vf.type = 'file'; vf.accept = 'video/*'; vf.className = 'hidden-file';
+    vb.onclick = () => vf.click();
+    vf.addEventListener('change', async () => {
+      const f = vf.files && vf.files[0]; vf.value = ''; if (!f) return;
+      if (f.size > 300 * 1024 * 1024){ st.className = 'status err'; st.textContent = '영상이 너무 커요 (300MB 이하로).'; return; }
+      st.className = 'status'; st.textContent = '영상 넣는 중…';
+      try{ await setSceneVid(ref, f); paint(); st.textContent = ''; if (!playing) showStill(); }catch(e){ st.className = 'status err'; st.textContent = '이 영상은 열 수 없어요. MP4로 다시 시도해 주세요.'; }
+    });
+    row.append(th, draw, up, vb, rm, fi, vf, st);
+  } else row.append(th, draw, up, rm, fi, st);
+  return row;
+}
+function renderListEditor(el, c){
+  const L = listOf(c);
+  const key = active + '|list|' + reel.lang + '|' + reel.durMode + '|' + L.items.length + '|' + (L.ver || 0) + '|' + c.title;
+  let head = el.querySelector('.pk-head');
+  if (key !== pickKey || !head){
+    pickKey = key; el.textContent = '';
+    head = document.createElement('div'); head.className = 'pk-head'; el.append(head);
+    // controls
+    const ctl = document.createElement('div'); ctl.className = 'grid2';
+    const cw = document.createElement('div'); const cl = document.createElement('label'); cl.className = 'lbl'; cl.htmlFor = 'listCount'; cl.textContent = '항목 수';
+    const cs = document.createElement('select'); cs.id = 'listCount'; [3, 4, 5].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n + '개'; cs.append(o); }); cs.value = L.count || 3;
+    cs.onchange = () => { L.count = Number(cs.value); persist(); };
+    cw.append(cl, cs);
+    const lw = document.createElement('div'); const ll = document.createElement('label'); ll.className = 'lbl'; ll.htmlFor = 'listLabel'; ll.textContent = '항목 이름 (예: 지혜, 습관)';
+    const li = document.createElement('input'); li.type = 'text'; li.id = 'listLabel'; li.value = L.label || ''; li.placeholder = '지혜';
+    li.addEventListener('input', () => { L.label = li.value; persist(); if (!playing) showStill(); });
+    lw.append(ll, li); ctl.append(cw, lw); el.append(ctl);
+    const aiRow = document.createElement('div'); aiRow.className = 'row';
+    const ai = document.createElement('button'); ai.type = 'button'; ai.className = 'small'; ai.id = 'listAI'; ai.textContent = L.items.length ? 'AI로 항목 다시 쓰기' : 'AI로 항목 채우기';
+    const st = document.createElement('span'); st.className = 'status'; st.id = 'listAIStatus';
+    ai.onclick = () => fillListAI(st, ai);
+    aiRow.append(ai, st); el.append(aiRow);
+    if (!c.title){ const e = document.createElement('div'); e.textContent = '먼저 카드를 만들고 STEP 2에서 제목을 하나 골라주세요.'; el.append(e); return; }
+    let k = 0;
+    // cover
+    { const row = document.createElement('div'); row.className = 'pk-row';
+      const lab = document.createElement('label'); lab.className = 'pk-title'; lab.htmlFor = 'listHook'; lab.textContent = '표지 · ' + plainT(c.title);
+      const hi = document.createElement('input'); hi.type = 'text'; hi.id = 'listHook'; hi.value = L.hook || ''; hi.placeholder = '표지 보조 문구 (끝까지 보고 싶게)';
+      hi.addEventListener('input', () => { L.hook = hi.value; persist(); if (!playing) showStill(); });
+      row.append(lab, hi, narrRowEl(L.cover, k, c.title, L.hook), imgRowEl(L.cover, k, c.title)); el.append(row); k++; }
+    // items
+    L.items.forEach((it, n) => {
+      const row = document.createElement('div'); row.className = 'pk-row';
+      const lab = document.createElement('label'); lab.className = 'pk-title'; lab.htmlFor = 'listHead' + n; lab.textContent = `${(L.label || '항목')} ${n + 1}`;
+      const hd = document.createElement('input'); hd.type = 'text'; hd.id = 'listHead' + n; hd.value = it.head || ''; hd.placeholder = '항목 한 줄 ([강조] 가능)';
+      hd.addEventListener('input', () => { it.head = hd.value; persist(); if (!playing) showStill(); });
+      const bd = document.createElement('textarea'); bd.rows = 2; bd.id = 'listBody' + n; bd.value = it.body || ''; bd.placeholder = '풀어 쓰는 설명';
+      bd.addEventListener('input', () => { it.body = bd.value; persist(); if (!playing) showStill(); });
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'small'; del.textContent = '이 항목 빼기';
+      del.onclick = () => { if (it.imgKey) idb.del(it.imgKey); L.items.splice(n, 1); L.ver = (L.ver || 0) + 1; persist(); syncPickList(); if (!playing) showStill(); };
+      row.append(lab, hd, bd, narrRowEl(it, k, it.head, it.body), imgRowEl(it, k, (it.head || '') + ' ' + (it.body || '')), del); el.append(row); k++;
+    });
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'small'; add.textContent = '+ 항목 직접 추가';
+    add.onclick = () => { L.items.push({head:'', body:''}); L.ver = (L.ver || 0) + 1; persist(); syncPickList(); };
+    el.append(add);
+    // closing
+    { const row = document.createElement('div'); row.className = 'pk-row';
+      const lab = document.createElement('label'); lab.className = 'pk-title'; lab.htmlFor = 'listClosing'; lab.textContent = '마무리 장면 (비우면 생략)';
+      const ci = document.createElement('input'); ci.type = 'text'; ci.id = 'listClosing'; ci.value = L.closing.text || ''; ci.placeholder = '예: 오늘 하나만 해보세요';
+      ci.addEventListener('input', () => { L.closing.text = ci.value; persist(); if (!playing){ showStill(); } });
+      row.append(lab, ci, narrRowEl(L.closing, k, L.closing.text, ''), imgRowEl(L.closing, k, L.closing.text || c.title)); el.append(row); }
+    if (reel.durMode === 'narr'){
+      const nRow = document.createElement('div'); nRow.className = 'row';
+      const nb = document.createElement('button'); nb.className = 'small'; nb.type = 'button'; nb.textContent = '내레이션 대본 복사 (브루용)';
+      const ns = document.createElement('span'); ns.className = 'status';
+      nb.onclick = () => copyNarration(ns);
+      nRow.append(nb, ns); el.append(nRow);
+    }
+  }
+  head.textContent = `장면 ${reelScenes.length}개 · 총 ${reelTotal()}초 · 표지 → ${L.items.length ? (L.label || '항목') + ' ' + L.items.length + '개' : '항목 없음 ("AI로 항목 채우기"를 눌러주세요)'}${(L.closing.text || '').trim() ? ' → 마무리' : ''}`;
+  refreshSecs();
+}
+async function fillListAI(st, btn){
+  const c = C(), L = listOf(c);
+  if (!c.title){ st.className = 'status err'; st.textContent = '먼저 카드를 만들어 주세요.'; return; }
+  const n = L.count || 3;
+  btn.disabled = true; st.className = 'status'; st.textContent = '항목 쓰는 중…';
+  try{
+    const prompt = `너는 인스타그램 릴스 에디터야. 아래 제목으로 '목록형' 릴스를 만든다. 첫 장면은 제목(표지), 이어서 항목 ${n}개를 한 장면씩 보여주고, 마지막에 마무리 한 줄로 끝낸다.
+
+${rulesFor(c)}
+
+${styleRules()}
+- label: 항목을 부르는 말 1~4자 (예: 지혜, 습관, 방법, 포인트, 신호). 제목에 숫자와 함께 나온 말이 있으면 그것을 쓴다.
+- hook: 표지 제목 아래 보조 한 줄, 30자 이내. 끝까지 보고 싶게, 제목을 반복하지 않는다.
+- items: 정확히 ${n}개. head: 항목의 핵심 한 줄 8~18자, 가장 중요한 단어 하나를 [대괄호]로. body: 그 항목을 풀어주는 한두 문장 45자 이내, 구체적인 장면이나 방법.
+- 항목끼리 겹치지 않게, 순서대로 흐름이 이어지게.
+- closing: 마지막 장면 한 줄 25자 이내. 공감이나 저장을 부르는 말 (예: "오늘 하나만 해보세요").
+${c.mode !== 'topic' ? '- 기사에 있는 사실만 쓰고, 숫자를 바꾸거나 지어내지 않는다.' : '- 실존 인물의 명언을 지어내지 않는다.'}
+
+제목: ${plainT(c.title)}
+
+글감:
+<<<
+${(c.article || '').slice(0, 12000)}
+>>>
+
+JSON 하나만 출력: {"label":"...","hook":"...","items":[{"head":"...","body":"..."}],"closing":"..."}`;
+    const d = parseJSON(await gemText(prompt, {json:true}));
+    const items = Array.isArray(d && d.items) ? d.items.filter(x => x && typeof x.head === 'string') : [];
+    if (!items.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+    L.items.forEach(it => { if (it.imgKey) idb.del(it.imgKey); });
+    L.items = items.slice(0, n).map(x => ({head:normBrackets(x.head).trim(), body:typeof x.body === 'string' ? x.body.replace(/[\[\]［］【】]/g, '').trim() : ''}));
+    if (typeof d.label === 'string') L.label = d.label.trim();
+    if (typeof d.hook === 'string') L.hook = d.hook.replace(/[\[\]］［]/g, '').trim();
+    if (typeof d.closing === 'string') L.closing.text = d.closing.replace(/[\[\]]/g, '').trim();
+    L.cover.narr = null; L.closing.narr = null;
+    L.ver = (L.ver || 0) + 1; persist(); pickKey = ''; showStill();
+    const s2 = $('#listAIStatus'); if (s2){ s2.className = 'status ok'; s2.textContent = '채웠어요. 문구는 직접 고칠 수 있어요.'; }
+  }catch(e){ const s2 = $('#listAIStatus') || st; s2.className = 'status err'; s2.textContent = e.message; }
+  finally{ const b = $('#listAI'); if (b) b.disabled = false; }
+}
+function syncPickList(){
+  const el = $('#pickList'); if (!el) return;
+  if (reel.scope === 'list'){ renderListEditor(el, C()); return; }
+  if (reel.scope === 'mood'){ renderMoodEditor(el, C()); return; }
+  const c = C(), ts = picksOf(c);
+  if (reel.scope === 'titles' && ts.length){
+    const key = active + '|' + reel.lang + '|' + ts.map(x => x.title).join('§');
+    let head = el.querySelector('.pk-head');
+    if (key !== pickKey || !head){
+      pickKey = key; el.textContent = '';
+      head = document.createElement('div'); head.className = 'pk-head'; el.append(head);
+      ts.forEach((x, k) => {
+        const row = document.createElement('div'); row.className = 'pk-row';
+        const lab = document.createElement('label'); lab.className = 'pk-title'; lab.htmlFor = 'pkSub' + k;
+        lab.textContent = `${k + 1}. ${x.title.replace(/[\[\]［］【】〔〕]/g, '').replace(/\n/g, ' ')}`;
+        const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'pkSub' + k; inp.value = x.sub || ''; inp.placeholder = '이 장면의 보조 문구 (비우면 안 나와요)';
+        inp.addEventListener('input', () => { x.sub = inp.value; persist(); if (!playing) showStill(); });
+        row.append(lab, inp);
+        if (reel.durMode === 'narr'){
+          const nr = document.createElement('textarea'); nr.rows = 2; nr.id = 'pkNarr' + k; nr.className = 'pk-narr'; nr.value = narrOf(x); nr.setAttribute('aria-label', '장면 ' + (k + 1) + ' 내레이션');
+          nr.placeholder = '이 장면에서 목소리로 읽을 문장';
+          nr.addEventListener('input', () => { x.narr = nr.value; persist(); if (!playing){ showStill(); refreshSecs(); } });
+          const sw = document.createElement('div'); sw.className = 'pk-secs';
+          const sl = document.createElement('label'); sl.htmlFor = 'pkSecs' + k; sl.textContent = '장면 길이(초)';
+          const si = document.createElement('input'); si.type = 'number'; si.min = '2'; si.max = '30'; si.step = '0.5'; si.id = 'pkSecs' + k; si.value = x.secs || '';
+          si.addEventListener('input', () => { const v = parseFloat(si.value); x.secs = v > 0 ? v : null; persist(); if (!playing){ showStill(); refreshSecs(); } });
+          const sh = document.createElement('span'); sh.className = 'pk-ja'; sh.textContent = '비우면 내레이션 길이로 자동';
+          sw.append(sl, si, sh);
+          row.append(nr, sw);
+        }
+        row.append(imgRowEl(x, k, x.title + ' ' + (x.sub || '')));
+        const J = jaOf(c);
+        if (isJa() && J && J.map && J.map[x.title] != null){
+          const jt = document.createElement('input'); jt.type = 'text'; jt.className = 'pk-ja'; jt.id = 'pkJaT' + k; jt.value = J.map[x.title].replace(/\n/g, ' / '); jt.setAttribute('aria-label', '일본어 제목');
+          jt.addEventListener('input', () => { J.map[x.title] = jt.value.replace(/\s*\/\s*/g, '\n'); persist(); if (!playing) showStill(); });
+          const sk = x.title + '§' + (x.sub || '');
+          const js = document.createElement('input'); js.type = 'text'; js.className = 'pk-ja'; js.id = 'pkJaS' + k; js.value = (J.subMap && J.subMap[sk]) || ''; js.setAttribute('aria-label', '일본어 보조 문구'); js.placeholder = '日本語のサブ文';
+          js.addEventListener('input', () => { J.subMap[sk] = js.value; persist(); if (!playing) showStill(); });
+          const hint = document.createElement('div'); hint.className = 'pk-ja'; hint.textContent = '일본어 (제목 줄바꿈은 " / ")';
+          row.append(hint, jt, js);
+        }
+        el.append(row);
+      });
+      const aiRow = document.createElement('div'); aiRow.className = 'row';
+      const ai = document.createElement('button'); ai.className = 'small'; ai.type = 'button'; ai.id = 'pkAI'; ai.textContent = 'AI로 장면별 보조 문구 채우기';
+      const st = document.createElement('span'); st.className = 'status'; st.id = 'pkAIStatus';
+      ai.onclick = () => fillSubsAI(st, ai);
+      aiRow.append(ai, st); head.after(aiRow);
+      if (reel.durMode === 'narr'){
+        const nRow = document.createElement('div'); nRow.className = 'row';
+        const nb = document.createElement('button'); nb.className = 'small'; nb.type = 'button'; nb.textContent = '내레이션 대본 복사 (브루용)';
+        const ns = document.createElement('span'); ns.className = 'status';
+        nb.onclick = () => copyNarration(ns);
+        nRow.append(nb, ns); el.append(nRow);
+      }
+    }
+    head.textContent = `장면 ${reelScenes.length}개 · 총 ${reelTotal()}초` + (reel.durMode === 'narr' ? ' · 장면 길이는 내레이션에 맞춰져요' : ' · 장면마다 아래 보조 문구가 제목 밑에 나와요');
+    refreshSecs();
+    return;
+  }
+  pickKey = '';
+  el.textContent = '';
+  if (reel.scope === 'titles'){ el.textContent = 'STEP 2에서 "릴스에 넣기"로 제목을 골라주세요. 지금은 현재 제목 한 장면만 나와요.'; return; }
+  el.textContent = `장면 ${reelScenes.length}개 · 총 ${reelTotal()}초`;
+}
+async function fillSubsAI(st, btn){
+  const c = C(), ts = picksOf(c);
+  if (!ts.length) return;
+  if (!c.article.trim()){ st.textContent = '기사 본문이 없어서 쓸 수 없어요. 직접 적어주세요.'; return; }
+  btn.disabled = true; st.className = 'status'; st.textContent = '쓰는 중…';
+  try{
+    const isNews = c.mode !== 'topic';
+    const subRule = isNews
+      ? `- 보조 문구는 각 35자 이내 한 줄. 그 장면 제목이 가리키는 내용을 기사 본문에서 찾아, 제목을 뒷받침하는 핵심 사실(누가·얼마·언제·무엇·왜)을 한 줄로 쓴다.
+- 제목을 반복하거나 비슷한 말로 바꿔 쓰지 않는다. 기사에 없는 숫자·사실은 절대 쓰지 않는다.
+- 예) 제목 "집행률 고작 6.6%" → "업무분담 지원금 251억 중 실제 쓴 돈은 16억뿐"
+- 각 보조 문구는 바로 그 장면의 제목에 맞는 기사 내용이어야 한다.`
+      : `- 보조 문구는 각 30자 이내 한 줄. 제목을 반복하거나 비슷한 말로 바꿔 쓰지 않는다. 제목이 만든 궁금증에 대한 답(구체적인 이유, 방법, 결과)을 준다.
+- 예) 제목 "혼자여도 불안하지 않은 그들의 비밀" → "매일의 루틴과 연락할 친구 셋, 그게 전부였어요"
+- 각 보조 문구는 바로 그 장면의 제목에 대한 답이어야 한다.`;
+    const prompt = `너는 인스타그램 릴스 자막 에디터야. 아래 ${isNews ? '기사' : '글'}로 만든 릴스 장면 제목마다, 제목 바로 아래 들어갈 보조 문구를 하나씩 쓴다.
+
+${rulesFor(c)}
+
+${styleRules()}
+${subRule}
+
+- 장면끼리 내용이 겹치지 않게, 순서대로 이야기가 이어지게.
+- 대괄호를 쓰지 않는다.
+
+장면 제목(순서대로): ${JSON.stringify(ts.map(x => x.title.replace(/\n/g, ' ')))}
+
+JSON 하나만 출력: {"subs":["...","..."]} (제목 수와 같은 개수)
+
+기사 본문:
+<<<
+${c.article.slice(0, 15000)}
+>>>`;
+    const d = parseJSON(await gemText(prompt, {json:true}));
+    const subs = Array.isArray(d && d.subs) ? d.subs : [];
+    if (!subs.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+    ts.forEach((x, k) => { if (typeof subs[k] === 'string'){ x.narr = null; } if (typeof subs[k] === 'string') x.sub = subs[k].replace(/[\[\]［］【】〔〕]/g, '').trim(); });
+    persist(); pickKey = ''; showStill();
+    const s2 = $('#pkAIStatus'); if (s2){ s2.className = 'status ok'; s2.textContent = '채웠어요. 마음에 안 들면 직접 고치세요.'; }
+  }catch(e){ const s2 = $('#pkAIStatus') || st; s2.className = 'status err'; s2.textContent = e.message; }
+  finally{ const b = $('#pkAI'); if (b) b.disabled = false; }
+}
+function showStill(){ prepPlans(); drawTimeline(reelTotal() - 0.6); }
+function syncJaUI(){
+  syncSeg('langSeg', reel.lang);
+  const sel = $('#jaFont'); if (!sel.options.length) JA_FONTS.forEach(([k, label]) => { const o = document.createElement('option'); o.value = k; o.textContent = label; sel.append(o); });
+  sel.value = reel.jaFont; sel.disabled = !isJa();
+  const J = jaOf(C());
+  $('#jaCapBox').hidden = !(isJa() && J && J.caption != null);
+  if (J && J.caption != null && document.activeElement !== $('#jaCaption')) $('#jaCaption').value = J.caption;
+  const st = $('#jaStatus');
+  if (!st.dataset.busy){
+    if (isJa()){
+      const miss = reelScenes.filter(x => x.jaMissing).length;
+      st.className = 'status' + (miss ? ' err' : ' ok');
+      st.textContent = !J ? '아직 번역하지 않았어요. "일본어로 번역하기"를 눌러주세요.' : miss ? `번역 안 된 장면 ${miss}개 (한국어로 나와요). 다시 번역해 주세요.` : '일본어로 만들어져요.';
+    } else st.textContent = '';
+  }
+}
+async function translateJa(){
+  const c = C(), st = $('#jaStatus'), btn = $('#jaBtn');
+  if (!c.title){ st.className = 'status err'; st.textContent = '먼저 카드를 만들어 주세요.'; return; }
+  const prevLang = reel.lang; reel.lang = 'ko'; const koScenes = reelList(); reel.lang = prevLang;
+  const scenes = koScenes.filter(x => x.i === active && x.title).map(x => ({title:x.title, sub:x.sub || ''}));
+  if (!scenes.find(x => x.title === c.title)) scenes.push({title:c.title, sub:c.sub || ''});
+  const listLabel = reel.scope === 'list' ? (listOf(c).label || '') : '';
+  btn.disabled = true; st.dataset.busy = '1'; st.className = 'status'; st.textContent = '번역하는 중…';
+  try{
+    const input = {scenes, label:listLabel, tag:c.tag, source:(c.source || '').replace(/^출처:\s*/, ''), caption:c.captions[c.capType] || '', hashtags:c.hashtags || ''};
+    const d = parseJSON(await gemText(`너는 한국어 인스타그램 릴스 문구를 일본 독자용으로 옮기는 번역가야. 일본의 40~70대가 인스타에서 읽는다고 생각하고, 직역이 아니라 일본어로 자연스럽게 읽히게 옮긴다.
+
+규칙
+- 정중하고 따뜻한 です・ます体. 짧고 쉬운 표현.
+- title: [대괄호]로 감싼 강조 표시를 같은 뜻의 일본어 단어에 그대로 유지한다. 반드시 반각 대괄호 [ ] 를 쓴다 (［］, 【】, 「」 금지). 강조는 한 군데만. 2줄 이내, 줄바꿈 위치에 \\n.
+- 숫자, 금액, 날짜, 고유명사는 정확히 옮긴다. 원화 금액은 그대로 "ウォン"으로 쓴다.
+- 한국 제도·기관 이름은 일본 독자가 이해하도록 짧게 풀어쓴다 (예: 기초연금 → 韓国の基礎年金).
+- 내용을 더하거나 빼지 않는다.
+- label: 항목 이름(예: 지혜, 습관)을 일본어 1~4자로 (예: 知恵, 習慣). 입력이 비었으면 "".
+- tag: 2~6자 일본어. source: 언론사명은 원래 이름 그대로 두고 앞에 "出典: "를 붙인다 (원문이 비었으면 "").
+- caption: 일본어 인스타 본문 (원문 구조 유지, 이모지 유지). hashtags: 일본어 해시태그 8~12개 (#포함, 일본에서 실제로 쓰이는 표현).
+
+입력(JSON): ${JSON.stringify(input)}
+
+JSON 하나만 출력: {"scenes":[{"title":"...","sub":"..."}],"label":"...","tag":"...","source":"...","caption":"...","hashtags":["#..."]} (scenes는 입력과 같은 개수, 같은 순서)`, {json:true}));
+    const out = Array.isArray(d && d.scenes) ? d.scenes : [];
+    if (!out.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+    const J = {map:{}, subMap:{}, tag:'', source:'', caption:'', hashtags:''};
+    scenes.forEach((x, k) => { const o = out[k] || {}; if (typeof o.title === 'string' && o.title.trim()){ J.map[x.title] = normBrackets(o.title.replace(/\\n/g, '\n')).trim(); J.subMap[x.title + '§' + x.sub] = typeof o.sub === 'string' ? o.sub.replace(/[\[\]［］【】〔〕]/g, '').trim() : ''; } });
+    J.tag = typeof d.tag === 'string' ? d.tag : '';
+    J.label = typeof d.label === 'string' ? d.label : '';
+    J.source = typeof d.source === 'string' ? d.source.trim() : '';
+    const tags = Array.isArray(d.hashtags) ? d.hashtags.filter(h => typeof h === 'string').map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
+    J.caption = ((typeof d.caption === 'string' ? d.caption.trim() : '') + (tags ? '\n\n' + tags : '')).trim();
+    c.ja = J; reel.lang = 'ja'; saveReel(); persist();
+    delete st.dataset.busy; pickKey = ''; syncReelUI(); showStill(); ensureFonts();
+    st.className = 'status ok'; st.textContent = '번역했어요. 장면 목록에서 일본어 문구를 고칠 수 있어요.';
+  }catch(e){ delete st.dataset.busy; st.className = 'status err'; st.textContent = e.message; }
+  finally{ btn.disabled = false; }
+}
+$('#jaBtn').onclick = translateJa;
+$('#reelDurMode').addEventListener('change', e => { reel.durMode = e.target.value; saveReel(); pickKey = ''; syncReelUI(); if (!playing) showStill(); });
+$('#reelCps').addEventListener('input', e => { reel.cps = Number(e.target.value); saveReel(); syncReelUI(); if (!playing){ showStill(); refreshSecs(); } });
+function refreshSecs(){ reelScenes.forEach((sc, k) => { const el = document.getElementById('pkSecs' + k); if (el && document.activeElement !== el && !sc.secs) el.placeholder = '자동 ' + (sc.dur - (sc.end && reelScenes.length > 1 ? 2 : 0)) + '초'; }); }
+async function copyNarration(st){
+  const lines = reelScenes.map((sc, k) => `[장면 ${k + 1} · ${sc.dur}초]\n${sc.narr || plainT(sc.title)}`);
+  await copyText(lines.join('\n\n'), st, null);
+}
+$('#langSeg').addEventListener('click', e => { const v = e.target.dataset && e.target.dataset.v; if (!v) return; reel.lang = v; saveReel(); pickKey = ''; syncReelUI(); if (!playing) showStill(); ensureFonts(); });
+$('#jaFont').addEventListener('change', e => { reel.jaFont = e.target.value; saveReel(); ensureFonts(); if (!playing) showStill(); });
+$('#jaCaption').addEventListener('input', e => { const J = jaOf(C()); if (J){ J.caption = e.target.value; persist(); } });
+$('#jaCopy').onclick = () => copyText($('#jaCaption').value, $('#jaCopyStatus'), $('#jaCaption'));
+function syncReelUI(){
+  try{ syncJaUI(); }catch(e){}
+  $('#reelDurMode').value = reel.durMode; $('#reelCps').value = reel.cps; $('#reelCpsVal').textContent = reel.cps + '자';
+  const narrMode = reel.durMode === 'narr' && (reel.scope === 'titles' || reel.scope === 'list' || reel.scope === 'mood');
+  $('#durNarrRow').hidden = !narrMode; $('#durFixedRow').hidden = narrMode;
+  $('#reelDur').value = reel.dur; $('#reelDurVal').textContent = reel.dur + '초';
+  $('#reelMotion').value = reel.motion; $('#reelScope').value = reel.scope; $('#reelAnim').value = reel.anim;
+  $('#reelTitleSize').value = reel.titleSize; $('#reelTitleSizeVal').textContent = reel.titleSize + 'px';
+  $('#reelSubSize').value = reel.subSize; $('#reelSubSizeVal').textContent = reel.subSize + 'px';
+  $('#reelY').value = Math.round((reel.offY || 0) * 100); $('#reelYVal').textContent = (reel.offY > 0 ? '+' : '') + Math.round((reel.offY || 0) * 100);
+  $('#reelGap').value = reel.gap || 0; $('#reelGapVal').textContent = (reel.gap || 0) + 'px';
+  $('#reelFx').value = reel.fx; $('#reelFxStr').value = reel.fxStr; $('#reelFxStrVal').textContent = reel.fxStr + '%'; $('#reelFxStr').disabled = reel.fx === 'none';
+  $('#bgmVol').value = reel.vol; $('#bgmVolVal').textContent = Math.round(reel.vol * 100) + '%';
+  $('#bgmName').textContent = bgmLabel || '음악 없음'; $('#bgmClear').hidden = !bgmUrl;
+}
+function saveReel(){ store.set('reel', reel); }
+$('#reelY').addEventListener('input', e => { reel.offY = Number(e.target.value) / 100; saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelFx').addEventListener('change', e => { reel.fx = e.target.value; saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelFxStr').addEventListener('input', e => { reel.fxStr = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelGap').addEventListener('input', e => { reel.gap = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelPosReset').onclick = () => { reel.offX = 0; reel.offY = 0; reel.gap = 0; saveReel(); syncReelUI(); if (!playing) showStill(); };
+(function(){
+  let dr = null, rq = false;
+  reelCv.addEventListener('pointerdown', e => { if (playing) return; dr = {x:e.clientX, y:e.clientY, ox:reel.offX || 0, oy:reel.offY || 0}; reelCv.setPointerCapture(e.pointerId); });
+  reelCv.addEventListener('pointermove', e => {
+    if (!dr || playing) return;
+    const r = reelCv.getBoundingClientRect();
+    reel.offX = Math.max(-0.06, Math.min(0.3, dr.ox + (e.clientX - dr.x) / r.width));
+    reel.offY = Math.max(-0.5, Math.min(0.4, dr.oy + (e.clientY - dr.y) / r.height));
+    if (!rq){ rq = true; requestAnimationFrame(() => { rq = false; syncReelUI(); showStill(); }); }
+  });
+  const end = () => { if (dr){ dr = null; saveReel(); } };
+  reelCv.addEventListener('pointerup', end); reelCv.addEventListener('pointercancel', end);
+})();
+$('#reelAnim').addEventListener('change', e => { reel.anim = e.target.value; saveReel(); if (!playing) showStill(); });
+$('#reelTitleSize').addEventListener('input', e => { reel.titleSize = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelSubSize').addEventListener('input', e => { reel.subSize = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelDur').addEventListener('input', e => { reel.dur = Number(e.target.value); saveReel(); syncReelUI(); if (!playing) showStill(); });
+$('#reelMotion').addEventListener('change', e => { reel.motion = e.target.value; saveReel(); if (!playing) showStill(); });
+$('#reelScope').addEventListener('change', e => { reel.scope = e.target.value; saveReel(); if (!playing) showStill(); });
+$('#bgmVol').addEventListener('input', e => { reel.vol = Number(e.target.value); saveReel(); syncReelUI(); if (playing && playing.gain) playing.gain.gain.value = reel.vol; });
+$('#bgmPick').onclick = () => $('#bgmFile').click();
+$('#bgmFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+  if (bgmUrl) URL.revokeObjectURL(bgmUrl);
+  bgmUrl = URL.createObjectURL(f); bgmLabel = f.name + ' · 프로그램을 다시 열면 한 번 더 골라야 해요'; syncReelUI();
+});
+$('#bgmClear').onclick = () => { if (bgmUrl) URL.revokeObjectURL(bgmUrl); bgmUrl = ''; bgmLabel = ''; syncReelUI(); };
+
+function stopPlaying(){
+  if (!playing) return;
+  try{ sceneVids.forEach(r => { r.v.pause(); r.v.muted = true; }); }catch(e){}
+  cancelAnimationFrame(playing.raf);
+  if (playing.audio){ try{ playing.audio.pause(); }catch(e){} }
+  if (playing.actx){ try{ playing.actx.close(); }catch(e){} }
+  playing = null;
+  $('#reelPlay').textContent = '미리보기 재생'; $('#reelRec').disabled = false; $('#reelPlay').disabled = false; $('#recBadge').hidden = true;
+}
+// ---------- minimal MP4 muxer (non-fragmented, moov first) ----------
+// video: {kind:'avc'|'vp9', width, height, fps, description?, codec, samples:[{data, pts(µs), key}]}
+// audio: {kind:'aac'|'opus', sampleRate, channels, description?, samples:[{data, dur(samples)}]} | null
+function muxMP4(video, audio){
+  const enc = new TextEncoder();
+  const u8 = a => new Uint8Array(a);
+  const u16 = v => u8([(v >>> 8) & 255, v & 255]);
+  const u24 = v => u8([(v >>> 16) & 255, (v >>> 8) & 255, v & 255]);
+  const u32 = v => u8([(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255]);
+  const i32 = v => u32(v >>> 0);
+  const str = s => enc.encode(s);
+  const cat = parts => { let n = 0; for (const p of parts) n += p.length; const o = new Uint8Array(n); let k = 0; for (const p of parts){ o.set(p, k); k += p.length; } return o; };
+  const box = (type, ...parts) => { const body = cat(parts); return cat([u32(body.length + 8), str(type), body]); };
+  const full = (type, version, flags, ...parts) => box(type, u8([version]), u24(flags), ...parts);
+  const zeros = n => new Uint8Array(n);
+  const matrix = cat([u32(0x00010000), u32(0), u32(0), u32(0), u32(0x00010000), u32(0), u32(0), u32(0), u32(0x40000000)]);
+
+  const VTS = video.fps * 1000, VDUR = 1000;
+  const vN = video.samples.length;
+  const vDuration = vN * VDUR;
+  const movieTS = 1000;
+  const aDuration = audio ? audio.samples.reduce((s, x) => s + x.dur, 0) : 0;
+  const movieDur = Math.max(Math.round(vDuration / VTS * movieTS), audio ? Math.round(aDuration / audio.sampleRate * movieTS) : 0);
+
+  function stts(durs){ const out = []; for (const d of durs){ const l = out[out.length - 1]; if (l && l[1] === d) l[0]++; else out.push([1, d]); } return full('stts', 0, 0, u32(out.length), ...out.map(([c, d]) => cat([u32(c), u32(d)]))); }
+  function stsz(sizes){ return full('stsz', 0, 0, u32(0), u32(sizes.length), ...sizes.map(u32)); }
+  function stco(offs){ return full('stco', 0, 0, u32(offs.length), ...offs.map(u32)); }
+  const stsc = () => full('stsc', 0, 0, u32(1), u32(1), u32(1), u32(1));
+  const dinf = () => box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1)));
+
+  function videoEntry(){
+    let cfg;
+    if (video.kind === 'avc') cfg = box('avcC', video.description);
+    else {
+      const m = /^vp09\.(\d+)\.(\d+)\.(\d+)/.exec(video.codec || '') || [0, '0', '40', '8'];
+      cfg = full('vpcC', 1, 0, u8([+m[1], +m[2], ((+m[3]) << 4) | (1 << 1) | 0, 1, 1, 1]), u16(0));
+    }
+    return box(video.kind === 'avc' ? 'avc1' : 'vp09', zeros(6), u16(1), u16(0), u16(0), zeros(12), u16(video.width), u16(video.height),
+      u32(0x00480000), u32(0x00480000), u32(0), u16(1), zeros(32), u16(0x0018), u16(0xFFFF), cfg);
+  }
+  function audioEntry(){
+    let cfg;
+    if (audio.kind === 'aac'){
+      let asc = audio.description;
+      if (!asc || !asc.length){ const fi = [96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350].indexOf(audio.sampleRate); asc = u8([(2 << 3) | (fi >> 1), ((fi & 1) << 7) | (audio.channels << 3)]); }
+      const dsi = cat([u8([0x05, asc.length]), asc]);
+      const dcd = cat([u8([0x04, 13 + dsi.length, 0x40, 0x15]), u24(0), u32(192000), u32(128000), dsi]);
+      const sl = u8([0x06, 0x01, 0x02]);
+      const es = cat([u8([0x03, 3 + dcd.length + sl.length]), u16(1), u8([0]), dcd, sl]);
+      cfg = full('esds', 0, 0, es);
+    } else {
+      let preskip = 312;
+      const d = audio.description;
+      if (d && d.length >= 12 && String.fromCharCode(...d.slice(0, 8)) === 'OpusHead') preskip = d[10] | (d[11] << 8);
+      cfg = box('dOps', u8([0, audio.channels]), u16(preskip), u32(audio.sampleRate), u16(0), u8([0]));
+    }
+    return box(audio.kind === 'aac' ? 'mp4a' : 'Opus', zeros(6), u16(1), zeros(8), u16(audio.channels), u16(16), u16(0), u16(0), u32(audio.sampleRate << 16 >>> 0), cfg);
+  }
+
+  function buildMoov(vOffs, aOffs){
+    // video track
+    const vSizes = video.samples.map(s => s.data.length);
+    const keys = []; video.samples.forEach((s, i) => { if (s.key) keys.push(i + 1); });
+    const ctsOff = video.samples.map((s, i) => Math.round(s.pts / 1e6 * VTS) - i * VDUR);
+    const needCtts = ctsOff.some(x => x !== 0);
+    const vStbl = box('stbl', full('stsd', 0, 0, u32(1), videoEntry()), stts(video.samples.map(() => VDUR)),
+      ...(keys.length && keys.length < vN ? [full('stss', 0, 0, u32(keys.length), ...keys.map(u32))] : []),
+      ...(needCtts ? [full('ctts', 1, 0, u32(vN), ...ctsOff.map(o => cat([u32(1), i32(o)])))] : []),
+      stsc(), stsz(vSizes), stco(vOffs));
+    const vTrak = box('trak',
+      full('tkhd', 0, 3, u32(0), u32(0), u32(1), u32(0), u32(Math.round(vDuration / VTS * movieTS)), zeros(8), u16(0), u16(0), u16(0), u16(0), matrix, u32(video.width << 16 >>> 0), u32(video.height << 16 >>> 0)),
+      box('mdia', full('mdhd', 0, 0, u32(0), u32(0), u32(VTS), u32(vDuration), u16(0x55C4), u16(0)),
+        full('hdlr', 0, 0, u32(0), str('vide'), zeros(12), str('VideoHandler\0')),
+        box('minf', full('vmhd', 0, 1, zeros(8)), dinf(), vStbl)));
+    let aTrak = new Uint8Array(0);
+    if (audio){
+      const aStbl = box('stbl', full('stsd', 0, 0, u32(1), audioEntry()), stts(audio.samples.map(s => s.dur)), stsc(), stsz(audio.samples.map(s => s.data.length)), stco(aOffs));
+      aTrak = box('trak',
+        full('tkhd', 0, 3, u32(0), u32(0), u32(2), u32(0), u32(Math.round(aDuration / audio.sampleRate * movieTS)), zeros(8), u16(0), u16(1), u16(0x0100), u16(0), matrix, u32(0), u32(0)),
+        box('mdia', full('mdhd', 0, 0, u32(0), u32(0), u32(audio.sampleRate), u32(aDuration), u16(0x55C4), u16(0)),
+          full('hdlr', 0, 0, u32(0), str('soun'), zeros(12), str('SoundHandler\0')),
+          box('minf', full('smhd', 0, 0, u16(0), u16(0)), dinf(), aStbl)));
+    }
+    const mvhd = full('mvhd', 0, 0, u32(0), u32(0), u32(movieTS), u32(movieDur), u32(0x00010000), u16(0x0100), zeros(10), matrix, zeros(24), u32(audio ? 3 : 2));
+    return box('moov', mvhd, vTrak, aTrak);
+  }
+
+  const ftyp = box('ftyp', str('isom'), u32(512), str('isom'), str('iso2'), str(video.kind === 'avc' ? 'avc1' : 'iso6'), str('mp41'));
+  const vZero = video.samples.map(() => 0), aZero = audio ? audio.samples.map(() => 0) : [];
+  const moovSize = buildMoov(vZero, aZero).length;
+  let off = ftyp.length + moovSize + 8;
+  const vOffs = video.samples.map(s => { const o = off; off += s.data.length; return o; });
+  const aOffs = audio ? audio.samples.map(s => { const o = off; off += s.data.length; return o; }) : [];
+  const moov = buildMoov(vOffs, aOffs);
+  const mdatLen = off - (ftyp.length + moov.length);
+  const parts = [ftyp, moov, u32(mdatLen), str('mdat')];
+  for (const s of video.samples) parts.push(s.data);
+  if (audio) for (const s of audio.samples) parts.push(s.data);
+  return new Blob(parts, {type:'video/mp4'});
+}
+
+// ---------- reel encoding (WebCodecs → real MP4) ----------
+const toU8 = ds => ds instanceof ArrayBuffer ? new Uint8Array(ds.slice(0)) : new Uint8Array(ds.buffer, ds.byteOffset, ds.byteLength).slice();
+async function pickVideoConfig(){
+  const base = {width:RW, height:RH, bitrate:16000000, framerate:30};
+  const list = [
+    {kind:'avc', codec:'avc1.640028', extra:{avc:{format:'avc'}}},
+    {kind:'avc', codec:'avc1.4d0028', extra:{avc:{format:'avc'}}},
+    {kind:'avc', codec:'avc1.42E028', extra:{avc:{format:'avc'}}},
+    {kind:'vp9', codec:'vp09.00.40.08', extra:{}}
+  ];
+  for (const c of list){
+    for (const hw of ['no-preference', 'prefer-software']){
+      const cfg = Object.assign({}, base, {codec:c.codec, hardwareAcceleration:hw}, c.extra);
+      try{ const r = await VideoEncoder.isConfigSupported(cfg); if (r.supported) return {kind:c.kind, codec:c.codec, cfg:r.config || cfg}; }catch(e){}
+    }
+  }
+  return null;
+}
+async function pickAudioConfig(preferAac){
+  const base = {sampleRate:48000, numberOfChannels:2, bitrate:128000};
+  const list = preferAac ? [['aac','mp4a.40.2'], ['opus','opus']] : [['opus','opus'], ['aac','mp4a.40.2']];
+  for (const [kind, codec] of list){
+    const cfg = Object.assign({}, base, {codec});
+    try{ const r = await AudioEncoder.isConfigSupported(cfg); if (r.supported) return {kind, cfg:r.config || cfg}; }catch(e){}
+  }
+  return null;
+}
+// ---------- mood (감성형) reels ----------
+const MOOD_FONTS = [['gb4','고운바탕 (부드러운 명조)','Gowun Batang',400],['nm4','나눔명조','Nanum Myeongjo',400],['ns4','노토 세리프','Noto Serif KR',400],['nk3','노토 산스 가는체','Noto Sans KR',300],['gb7','고운바탕 굵게','Gowun Batang',700]];
+function moodOf(c){
+  if (!c.mood) c.mood = {series:'', lines:[], ver:0};
+  if (!Array.isArray(c.mood.lines)) c.mood.lines = [];
+  return c.mood;
+}
+const moodF = () => { const f = MOOD_FONTS.find(x => x[0] === reel.moodFont) || MOOD_FONTS[0]; return {fam:f[2], w:f[3]}; };
+function moodSpec(px){
+  if (isJa()) return `400 ${px}px "Noto Serif JP", "Noto Sans JP", "Yu Mincho", serif`;
+  const f = moodF(); return `${f.w} ${px}px "${f.fam}", "Noto Serif KR", serif`;
+}
+// grain texture
+let grainCv = null;
+function grain(){
+  if (grainCv) return grainCv;
+  grainCv = document.createElement('canvas'); grainCv.width = grainCv.height = 256;
+  const g = grainCv.getContext('2d'), id = g.createImageData(256, 256), d = id.data;
+  for (let k = 0; k < d.length; k += 4){ const v = Math.random() * 255; d[k] = d[k+1] = d[k+2] = v; d[k+3] = 255; }
+  g.putImageData(id, 0, 0); return grainCv;
+}
+// scene videos
+const sceneVids = new Map();   // key -> {v, url}
+async function getSceneVid(key){
+  if (!key) return null;
+  if (sceneVids.has(key)) return sceneVids.get(key);
+  const blob = await idb.get(key); if (!blob) return null;
+  const url = URL.createObjectURL(blob);
+  const v = document.createElement('video'); v.src = url; v.muted = true; v.playsInline = true; v.loop = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
+  await new Promise(res => { v.onloadeddata = res; v.onerror = res; setTimeout(res, 8000); });
+  const rec = {v, url, blob}; sceneVids.set(key, rec); return rec;
+}
+function sceneVidNow(sc){ const r = sc.vidKey && sceneVids.get(sc.vidKey); if (!r && sc.vidKey) getSceneVid(sc.vidKey).then(() => { if (!playing) showStill(); }); return r ? r.v : null; }
+function seekVid(v, t){
+  return new Promise(res => {
+    const target = v.duration ? (t % Math.max(0.1, v.duration - 0.05)) : t;
+    if (Math.abs(v.currentTime - target) < 0.01 && v.readyState >= 2) return res();
+    const done = () => { v.removeEventListener('seeked', done); res(); };
+    v.addEventListener('seeked', done); v.currentTime = target; setTimeout(done, 1500);
+  });
+}
+async function ensureSceneVids(){ for (const sc of reelScenes){ if (sc.vidKey) await getSceneVid(sc.vidKey); } }
+async function prepareFrameAt(T){
+  const list = reelScenes; let idx = 0, acc = 0; while (idx < list.length - 1 && T >= acc + list[idx].dur){ acc += list[idx].dur; idx++; }
+  const sc = list[idx]; if (sc && sc.vidKey){ const r = await getSceneVid(sc.vidKey); if (r){ r.v.pause(); await seekVid(r.v, T - acc); } }
+}
+let stillSeekPending = false;
+function drawMood(g, sc, t, D){
+  const c = cards[sc.i];
+  g.save(); g.fillStyle = '#000'; g.fillRect(0, 0, RW, RH);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  const v = sceneVidNow(sc);
+  if (v && v.videoWidth){
+    if (playing && !playing.encoding){
+      if (v.paused){ v.muted = !(reel.moodSound); v.volume = reel.moodSoundVol == null ? 0.8 : reel.moodSoundVol; v.play().catch(() => {}); }
+      const target = v.duration ? t % Math.max(0.1, v.duration - 0.05) : t;
+      if (Math.abs(v.currentTime - target) > 0.35) v.currentTime = target;
+    } else if (!playing && !stillSeekPending){
+      const target = v.duration ? Math.min(t, v.duration - 0.05) : t;
+      if (Math.abs(v.currentTime - target) > 0.05){ stillSeekPending = true; v.addEventListener('seeked', () => { stillSeekPending = false; showStill(); }, {once:true}); v.currentTime = target; }
+    }
+    const k = t / D, s0 = Math.max(RW / v.videoWidth, RH / v.videoHeight) * (1 + 0.03 * k);
+    const w = v.videoWidth * s0, h = v.videoHeight * s0;
+    g.drawImage(v, (RW - w) / 2, (RH - h) / 2, w, h);
+  } else {
+    const bg = sceneBgOf(sc) || buildBg(sc.i), k = t / D;
+    const base = Math.max(RW / bg.width, RH / bg.height), zoom = 1.02 + 0.06 * k, s0 = base * zoom;
+    const w = bg.width * s0, h = bg.height * s0, drift = (sc.n % 2 ? -1 : 1) * (w - RW) * 0.25 * (k - 0.5);
+    g.drawImage(bg, (RW - w) / 2 + drift, (RH - h) / 2, w, h);
+  }
+  // soft grade + vignette
+  g.fillStyle = 'rgba(10,8,6,0.22)'; g.fillRect(0, 0, RW, RH);
+  const vg = g.createRadialGradient(RW / 2, RH * 0.5, RH * 0.25, RW / 2, RH * 0.5, RH * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); g.fillStyle = vg; g.fillRect(0, 0, RW, RH);
+  // grain
+  if (reel.moodGrain !== false){
+    g.save(); g.globalAlpha = 0.07; g.globalCompositeOperation = 'overlay';
+    const gc = grain(), ox = Math.floor(Math.random() * 256), oy = Math.floor(Math.random() * 256);
+    g.translate(-ox, -oy); g.fillStyle = g.createPattern(gc, 'repeat'); g.fillRect(0, 0, RW + 256, RH + 256); g.restore();
+  }
+  // series label
+  const M = moodOf(c);
+  const series = (sc.series != null ? sc.series : M.series) || '';
+  if (series.trim()){
+    g.save(); g.globalAlpha = 0.85 * easeOut(t / 1.2); g.font = isJa() ? '500 30px "Noto Sans JP", sans-serif' : '500 30px "Noto Sans KR", sans-serif';
+    setLS(g, 6); g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 12; g.fillText(series, RW / 2, RH * 0.11); setLS(g, 0); g.restore();
+  }
+  // the line
+  const fs = reel.moodSize || 56, lh = fs * 1.6;
+  g.font = moodSpec(fs); setLS(g, 2);
+  const lines = layout(g, plainT(sc.title || '').replace(/ \/ /g, '\n'), RW * 0.78);
+  const blockH = lines.length * lh;
+  const top = reel.moodPos === 'lower' ? RH * 0.68 - blockH / 2 : RH * 0.5 - blockH / 2 + (reel.offY || 0) * RH;
+  const a = easeOut((t - 0.5) / 1.4);
+  g.globalAlpha = a; g.textAlign = 'center'; g.textBaseline = 'top';
+  g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = fs * 0.35; g.shadowOffsetY = 2;
+  g.fillStyle = '#FFFFFF';
+  lines.forEach((ln, li) => g.fillText(strOf(ln), RW / 2, top + li * lh + (1 - a) * 18));
+  setLS(g, 0);
+  // sub line (optional, smaller)
+  if (sc.sub && sc.sub.trim()){
+    const a2 = easeOut((t - 1.4) / 1.2); g.globalAlpha = a2 * 0.85;
+    g.font = moodSpec(Math.round(fs * 0.55)); g.fillText(plainT(sc.sub), RW / 2, top + blockH + fs * 0.4);
+  }
+  // ending: account
+  if (sc.end && c.handle.trim()){
+    const a3 = easeOut((t - Math.max(1.6, D - 2.2)) / 0.8); g.globalAlpha = a3 * 0.85;
+    g.shadowBlur = 8; g.font = '500 32px "Noto Sans KR", "Noto Sans JP", sans-serif'; setLS(g, 3); g.fillText(c.handle, RW / 2, RH - 240); setLS(g, 0);
+  }
+  g.restore();
+}
+function renderMoodEditor(el, c){
+  const M = moodOf(c);
+  const key = active + '|mood|' + reel.lang + '|' + reel.durMode + '|' + M.lines.length + '|' + (M.ver || 0);
+  let head = el.querySelector('.pk-head');
+  if (key !== pickKey || !head){
+    pickKey = key; el.textContent = '';
+    head = document.createElement('div'); head.className = 'pk-head'; el.append(head);
+    const g2 = document.createElement('div'); g2.className = 'grid2';
+    const mk = (labelText, node, id) => { const w = document.createElement('div'); const l = document.createElement('label'); l.className = 'lbl'; l.htmlFor = id; l.textContent = labelText; w.append(l, node); return w; };
+    const si = document.createElement('input'); si.type = 'text'; si.id = 'moodSeries'; si.value = M.series || ''; si.placeholder = '예: 우아하게 혼자 #1';
+    si.addEventListener('input', () => { M.series = si.value; persist(); if (!playing) showStill(); });
+    const fsel = document.createElement('select'); fsel.id = 'moodFont'; MOOD_FONTS.forEach(([k, label]) => { const o = document.createElement('option'); o.value = k; o.textContent = label; fsel.append(o); }); fsel.value = reel.moodFont || 'gb4';
+    fsel.onchange = () => { reel.moodFont = fsel.value; saveReel(); ensureFonts(); if (!playing) showStill(); };
+    const pos = document.createElement('select'); pos.id = 'moodPos'; [['center','가운데'],['lower','아래쪽']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; pos.append(o); }); pos.value = reel.moodPos || 'center';
+    pos.onchange = () => { reel.moodPos = pos.value; saveReel(); if (!playing) showStill(); };
+    const sz = document.createElement('input'); sz.type = 'range'; sz.id = 'moodSize'; sz.min = 36; sz.max = 90; sz.step = 2; sz.value = reel.moodSize || 56;
+    sz.oninput = () => { reel.moodSize = Number(sz.value); saveReel(); if (!playing) showStill(); };
+    g2.append(mk('시리즈 이름 (위쪽 작은 글씨)', si, 'moodSeries'), mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'), mk('문장 크기', sz, 'moodSize'));
+    el.append(g2);
+    const opt = document.createElement('div'); opt.className = 'row';
+    const snd = document.createElement('label'); snd.className = 'check'; const sc1 = document.createElement('input'); sc1.type = 'checkbox'; sc1.id = 'moodSound'; sc1.checked = !!reel.moodSound;
+    sc1.onchange = () => { reel.moodSound = sc1.checked; saveReel(); }; snd.append(sc1, ' 영상 원래 소리 넣기 (빗소리 등)');
+    const grn = document.createElement('label'); grn.className = 'check'; const gc1 = document.createElement('input'); gc1.type = 'checkbox'; gc1.id = 'moodGrain'; gc1.checked = reel.moodGrain !== false;
+    gc1.onchange = () => { reel.moodGrain = gc1.checked; saveReel(); if (!playing) showStill(); }; grn.append(gc1, ' 필름 질감');
+    opt.append(snd, grn); el.append(opt);
+    const aiRow = document.createElement('div'); aiRow.className = 'row';
+    const cnt = document.createElement('select'); cnt.id = 'moodCount'; [1, 2, 3].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = '장면 ' + n + '개'; cnt.append(o); }); cnt.value = M.count || 2;
+    cnt.onchange = () => { M.count = Number(cnt.value); persist(); };
+    const ai = document.createElement('button'); ai.type = 'button'; ai.className = 'small'; ai.id = 'moodAI'; ai.textContent = 'AI로 감성 문장 쓰기';
+    const st = document.createElement('span'); st.className = 'status'; st.id = 'moodAIStatus';
+    ai.onclick = () => fillMoodAI(st, ai);
+    aiRow.append(cnt, ai, st); el.append(aiRow);
+    M.lines.forEach((ln, n) => {
+      const row = document.createElement('div'); row.className = 'pk-row';
+      const lab = document.createElement('label'); lab.className = 'pk-title'; lab.htmlFor = 'moodLine' + n; lab.textContent = '장면 ' + (n + 1);
+      const ti = document.createElement('input'); ti.type = 'text'; ti.id = 'moodLine' + n; ti.value = ln.text || ''; ti.placeholder = '화면에 띄울 문장 (줄바꿈은 " / ")';
+      ti.addEventListener('input', () => { ln.text = ti.value; persist(); if (!playing) showStill(); });
+      const sub = document.createElement('input'); sub.type = 'text'; sub.id = 'moodSub' + n; sub.value = ln.sub || ''; sub.placeholder = '작은 두 번째 줄 (선택)';
+      sub.addEventListener('input', () => { ln.sub = sub.value; persist(); if (!playing) showStill(); });
+      const sceneDesc = ln.scene || ln.text || '';
+      const sd = document.createElement('input'); sd.type = 'text'; sd.id = 'moodScene' + n; sd.value = ln.scene || ''; sd.placeholder = '배경 장면 설명 (그림 그릴 때 사용, 예: 비 오는 창가의 찻잔)';
+      sd.addEventListener('input', () => { ln.scene = sd.value; persist(); });
+      const media = imgRowEl(ln, n, sceneDesc, true);
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'small'; del.textContent = '이 장면 빼기';
+      del.onclick = () => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); M.lines.splice(n, 1); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); if (!playing) showStill(); };
+      row.append(lab, ti, sub, sd, narrRowEl(ln, n, ln.text, ln.sub), media, del); el.append(row);
+    });
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'small'; add.textContent = '+ 장면 직접 추가';
+    add.onclick = () => { M.lines.push({text:'', sub:''}); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); };
+    el.append(add);
+  }
+  head.textContent = `장면 ${reelScenes.length}개 · 총 ${reelTotal()}초 · 감성형` + (M.lines.length ? '' : ' (문장을 쓰거나 "AI로 감성 문장 쓰기"를 눌러주세요)');
+  refreshSecs();
+}
+async function fillMoodAI(st, btn){
+  const c = C(), M = moodOf(c), n = M.count || 2;
+  const topic = (c.mode === 'topic' ? c.article : '') || plainT(c.title) || '';
+  if (!topic.trim()){ st.className = 'status err'; st.textContent = 'STEP 1에 주제를 한 줄 적어주세요. (예: 비 오는 날 혼자 마시는 차)'; return; }
+  btn.disabled = true; st.className = 'status'; st.textContent = '쓰는 중…';
+  try{
+    const d = parseJSON(await gemText(`너는 40~70대를 위한 감성 쇼츠 에디터야. "우아하게 혼자" 같은 조용하고 품위 있는 무드의 7~12초 영상에 들어갈 짧은 문장을 쓴다.
+
+규칙
+- 문장은 장면마다 하나, 각 22자 이내. 시처럼 짧고 여백 있게. 설명하거나 가르치지 않는다.
+- 혼자만의 여유, 나를 돌보는 시간, 계절과 빛, 작은 사치 같은 정서. 외로움을 슬프게 그리지 않는다.
+- 실존 인물 명언을 쓰지 않는다. 자극적인 표현, 이모지 금지.
+- scene: 배경 장면 묘사(한국어, 20자 이내). 얼굴 없이 손·뒷모습·사물·풍경으로 (예: 비 오는 창가의 찻잔).
+- series: 시리즈 이름 한 줄 (예: 우아하게 혼자).
+${styleRules()}
+
+주제: ${topic.slice(0, 2000)}
+
+JSON 하나만 출력: {"series":"...","lines":[{"text":"...","sub":"","scene":"..."}]} (lines 정확히 ${n}개, sub는 필요할 때만 12자 이내)`, {json:true}));
+    const lines = Array.isArray(d && d.lines) ? d.lines.filter(x => x && typeof x.text === 'string') : [];
+    if (!lines.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
+    M.lines.forEach(ln => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); });
+    M.lines = lines.slice(0, n).map(x => ({text:plainT(x.text), sub:typeof x.sub === 'string' ? plainT(x.sub) : '', scene:typeof x.scene === 'string' ? x.scene.trim() : ''}));
+    if (typeof d.series === 'string' && !M.series) M.series = d.series.trim();
+    M.ver = (M.ver || 0) + 1; persist(); pickKey = ''; showStill();
+    const s2 = $('#moodAIStatus'); if (s2){ s2.className = 'status ok'; s2.textContent = '썼어요. 장면마다 그림을 그리거나 사진·영상을 올려보세요.'; }
+  }catch(e){ const s2 = $('#moodAIStatus') || st; s2.className = 'status err'; s2.textContent = e.message; }
+  finally{ const b = $('#moodAI'); if (b) b.disabled = false; }
+}
+async function setSceneVid(ref, file){
+  const key = 'v' + Date.now() + Math.floor(Math.random() * 1000);
+  await idb.put(key, file);
+  if (ref.vidKey){ idb.del(ref.vidKey); const old = sceneVids.get(ref.vidKey); if (old){ URL.revokeObjectURL(old.url); sceneVids.delete(ref.vidKey); } }
+  if (ref.imgKey){ idb.del(ref.imgKey); ref.imgKey = null; }
+  ref.vidKey = key; await getSceneVid(key); persist();
+}
+// mix bgm + scene video sounds
+async function renderMix(total){
+  const sr = 48000, len = Math.ceil(total * sr);
+  const off = new OfflineAudioContext(2, len, sr);
+  let any = false;
+  if (bgmUrl){
+    try{
+      const raw = await (await fetch(bgmUrl)).arrayBuffer();
+      const dec = await new OfflineAudioContext(2, sr, sr).decodeAudioData(raw);
+      const src = off.createBufferSource(); src.buffer = dec; src.loop = true;
+      const g = off.createGain(); g.gain.setValueAtTime(reel.vol, 0); g.gain.setValueAtTime(reel.vol, Math.max(0, total - 1.5)); g.gain.linearRampToValueAtTime(0.0001, total);
+      src.connect(g); g.connect(off.destination); src.start(0); any = true;
+    }catch(e){}
+  }
+  if (reel.scope === 'mood' && reel.moodSound){
+    let acc = 0;
+    for (const sc of reelScenes){
+      if (sc.vidKey){
+        try{
+          const r = await getSceneVid(sc.vidKey);
+          const raw = await r.blob.arrayBuffer();
+          const dec = await new OfflineAudioContext(2, sr, sr).decodeAudioData(raw);
+          const src = off.createBufferSource(); src.buffer = dec; src.loop = true;
+          const g = off.createGain(), vol = reel.moodSoundVol == null ? 0.8 : reel.moodSoundVol;
+          g.gain.setValueAtTime(0.0001, acc); g.gain.linearRampToValueAtTime(vol, acc + 0.5);
+          g.gain.setValueAtTime(vol, Math.max(acc + 0.5, acc + sc.dur - 0.6)); g.gain.linearRampToValueAtTime(0.0001, acc + sc.dur);
+          src.connect(g); g.connect(off.destination); src.start(acc); src.stop(acc + sc.dur); any = true;
+        }catch(e){}
+      }
+      acc += sc.dur;
+    }
+  }
+  return any ? off.startRendering() : null;
+}
+
+async function renderBgm(total){
+  const raw = await (await fetch(bgmUrl)).arrayBuffer();
+  const sr = 48000, len = Math.ceil(total * sr);
+  const dec = await new OfflineAudioContext(2, sr, sr).decodeAudioData(raw);
+  const off = new OfflineAudioContext(2, len, sr);
+  const src = off.createBufferSource(); src.buffer = dec; src.loop = true;
+  const g = off.createGain();
+  g.gain.setValueAtTime(reel.vol, 0);
+  g.gain.setValueAtTime(reel.vol, Math.max(0, total - 1.5));
+  g.gain.linearRampToValueAtTime(0.0001, total);
+  src.connect(g); g.connect(off.destination); src.start(0);
+  return off.startRendering();
+}
+async function encodeReel(status){
+  await ensureSceneImgs(); await ensureSceneVids(); sceneVids.forEach(r => r.v.pause());
+  const fps = 30, total = reelTotal(), nFrames = Math.round(total * fps);
+  const vc = await pickVideoConfig();
+  if (!vc) throw new Error('no-video-encoder');
+  // video
+  const vSamples = []; let vDesc = null, vErr = null;
+  const venc = new VideoEncoder({
+    output: (chunk, meta) => {
+      if (meta && meta.decoderConfig && meta.decoderConfig.description && !vDesc) vDesc = toU8(meta.decoderConfig.description);
+      const d = new Uint8Array(chunk.byteLength); chunk.copyTo(d);
+      vSamples.push({data:d, pts:chunk.timestamp, key:chunk.type === 'key'});
+    },
+    error: e => { vErr = e; }
+  });
+  venc.configure(vc.cfg);
+  for (let k = 0; k < nFrames; k++){
+    if (vErr) throw vErr;
+    if (reel.scope === 'mood') await prepareFrameAt(Math.min(k / fps, total - 0.001));
+    drawTimeline(Math.min(k / fps, total - 0.001));
+    const frame = new VideoFrame(reelCv, {timestamp:Math.round(k * 1e6 / fps), duration:Math.round(1e6 / fps)});
+    venc.encode(frame, {keyFrame: k % 60 === 0});
+    frame.close();
+    while (venc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 4));
+    if (k % 10 === 0){ status.textContent = `영상 만드는 중… ${Math.round(k / nFrames * 100)}%`; await new Promise(r => setTimeout(r, 0)); }
+  }
+  await venc.flush(); venc.close();
+  if (vErr) throw vErr;
+  vSamples.sort((a, b) => a.pts - b.pts);
+  if (vc.kind === 'avc' && !vDesc) throw new Error('no-avc-config');
+  // audio
+  let audio = null, audioNote = '';
+  const wantVidSound = reel.scope === 'mood' && reel.moodSound && reelScenes.some(x => x.vidKey);
+  if ((bgmUrl || wantVidSound) && window.AudioEncoder){
+    status.textContent = '소리 넣는 중…';
+    const ac = await pickAudioConfig(vc.kind === 'avc');
+    if (ac){
+      const buf = await renderMix(total);
+      if (buf){
+      const aSamples = []; let aDesc = null, aErr = null;
+      const sr = 48000, defDur = ac.kind === 'aac' ? 1024 : 960;
+      const aenc = new AudioEncoder({
+        output: (chunk, meta) => {
+          if (meta && meta.decoderConfig && meta.decoderConfig.description && !aDesc) aDesc = toU8(meta.decoderConfig.description);
+          const d = new Uint8Array(chunk.byteLength); chunk.copyTo(d);
+          aSamples.push({data:d, dur: chunk.duration ? Math.round(chunk.duration * sr / 1e6) : defDur});
+        },
+        error: e => { aErr = e; }
+      });
+      aenc.configure(ac.cfg);
+      const L = buf.getChannelData(0), R = buf.getChannelData(1), n = buf.length, step = 4800;
+      for (let o = 0; o < n; o += step){
+        const m = Math.min(step, n - o), data = new Float32Array(m * 2);
+        data.set(L.subarray(o, o + m), 0); data.set(R.subarray(o, o + m), m);
+        const ad = new AudioData({format:'f32-planar', sampleRate:sr, numberOfFrames:m, numberOfChannels:2, timestamp:Math.round(o * 1e6 / sr), data});
+        aenc.encode(ad); ad.close();
+      }
+      await aenc.flush(); aenc.close();
+      if (!aErr && aSamples.length) audio = {kind:ac.kind, sampleRate:sr, channels:2, description:aDesc, samples:aSamples};
+      else audioNote = ' (소리는 넣지 못했어요)';
+      } else audioNote = ' (소리를 읽지 못해 소리 없이 저장했어요)';
+    } else audioNote = ' (이 브라우저는 음악 인코딩을 지원하지 않아 음악 없이 저장했어요)';
+  }
+  status.textContent = '파일로 묶는 중…';
+  const blob = muxMP4({kind:vc.kind, codec:vc.codec, width:RW, height:RH, fps, description:vDesc, samples:vSamples}, audio);
+  return {blob, note: audioNote, kind: vc.kind};
+}
+
+async function runReel(record){
+  if (!record || !window.VideoEncoder || !window.VideoFrame) return runReelLive(record);
+  if (playing) return;
+  const list = reelList();
+  if (!list[0].title){ toast('먼저 카드를 만들고 제목을 골라주세요.'); return; }
+  try{ await document.fonts.ready; }catch(e){}
+  prepPlans(); await ensureSceneImgs(); await ensureSceneVids();
+  const status = $('#reelStatus');
+  playing = {raf:0, encoding:true};
+  $('#reelRec').disabled = true; $('#reelPlay').disabled = true; $('#reelRec').textContent = '만드는 중…';
+  $('#recBadge').textContent = '● 만드는 중'; $('#recBadge').hidden = false;
+  let fallback = false;
+  try{
+    const r = await encodeReel(status);
+    const d = new Date(), pad = n => String(n).padStart(2, '0');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob);
+    a.download = `reels${isJa() ? '_ja' : ''}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.mp4`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+    status.className = 'status ok';
+    status.textContent = `완성! ${reelTotal()}초 MP4 영상을 다운로드 폴더에 저장했어요` + r.note + (r.kind === 'vp9' ? ' · 인스타에서 안 올라가면 브루에서 MP4로 내보내 주세요.' : '.');
+  }catch(e){
+    if (e && (e.message === 'no-video-encoder' || e.message === 'no-avc-config')) fallback = true;
+    else { status.className = 'status err'; status.textContent = '영상을 만들지 못했어요. 다시 눌러 주세요. (' + ((e && e.message) || e) + ')'; }
+  }finally{
+    playing = null;
+    $('#reelRec').disabled = false; $('#reelPlay').disabled = false; $('#reelRec').textContent = '영상 만들기';
+    $('#recBadge').hidden = true; $('#recBadge').textContent = '● 녹화 중';
+    showStill();
+  }
+  if (fallback){ status.className = 'status'; return runReelLive(true); }
+}
+async function runReelLive(record){
+  try{ await ensureSceneVids(); }catch(e){}
+  if (playing){ stopPlaying(); return; }
+  const list = reelList();
+  if (!list[0].title){ toast('먼저 카드를 만들고 제목을 골라주세요.'); return; }
+  try{ await document.fonts.ready; }catch(e){}
+  prepPlans();
+  const total = reelTotal();
+  const st = {raf:0};
+  playing = st;
+  // audio
+  let audioStream = null;
+  if (bgmUrl){
+    try{
+      const actx = new (window.AudioContext || window.webkitAudioContext)();
+      const audio = new Audio(bgmUrl); audio.loop = true;
+      const src = actx.createMediaElementSource(audio);
+      const gain = actx.createGain(); gain.gain.value = reel.vol;
+      src.connect(gain);
+      gain.connect(actx.destination);
+      if (record){ const dest = actx.createMediaStreamDestination(); gain.connect(dest); audioStream = dest.stream; }
+      Object.assign(st, {actx, audio, gain});
+      await audio.play();
+    }catch(e){ toast('음악을 재생하지 못했어요. 다른 파일로 시도해 주세요.'); }
+  }
+  let rec = null, chunks = [], mime = '';
+  if (record){
+    const types = ['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    mime = types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+    if (!window.MediaRecorder || !reelCv.captureStream){ stopPlaying(); toast('이 브라우저는 영상 저장을 지원하지 않아요. 크롬이나 엣지를 써주세요.'); return; }
+    const stream = reelCv.captureStream(30);
+    if (audioStream) audioStream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+    rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8000000} : {videoBitsPerSecond:8000000});
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    st.rec = rec;
+    rec.start(250);
+    $('#recBadge').hidden = false; $('#reelPlay').disabled = true;
+    $('#reelRec').textContent = '녹화 중…'; $('#reelRec').disabled = true;
+  } else {
+    $('#reelPlay').textContent = '정지'; $('#reelRec').disabled = true;
+  }
+  const t0 = performance.now();
+  const status = $('#reelStatus');
+  const tick = () => {
+    if (playing !== st) return;
+    const T = (performance.now() - t0) / 1000;
+    if (st.gain && st.actx){ const left = total - T; st.gain.gain.value = reel.vol * clamp01(left / 1.5); }
+    drawTimeline(Math.min(T, total - 0.001));
+    if (record) status.textContent = `영상 만드는 중… ${Math.min(total, T).toFixed(0)} / ${total}초 · 창을 가리지 마세요`;
+    if (T >= total){
+      if (record && rec){
+        rec.onstop = () => {
+          const type = (mime || 'video/webm').split(';')[0];
+          const blob = new Blob(chunks, {type});
+          const ext = type.includes('mp4') ? 'mp4' : 'webm';
+          const d = new Date(), pad = n => String(n).padStart(2, '0');
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+          a.download = `reels${isJa() ? '_ja' : ''}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+          document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+          status.textContent = ext === 'mp4' ? `완성! ${total}초 MP4 영상을 다운로드 폴더에 저장했어요.` : `완성! WebM 형식으로 저장됐어요. 브루나 캡컷에 넣으면 MP4로 내보낼 수 있어요.`;
+          $('#reelRec').textContent = '영상 만들기';
+          stopPlaying(); showStill();
+        };
+        setTimeout(() => { try{ rec.stop(); }catch(e){} }, 400);
+        st.raf = 0;
+        return;
+      }
+      stopPlaying(); showStill(); status.textContent = '';
+      return;
+    }
+    st.raf = requestAnimationFrame(tick);
+  };
+  st.raf = requestAnimationFrame(tick);
+}
+$('#reelPlay').onclick = () => runReel(false);
+$('#reelRec').onclick = () => runReel(true);
+document.addEventListener('visibilitychange', () => { if (document.hidden && playing && playing.rec){ toast('창이 가려져서 영상이 끊길 수 있어요. 다시 만들어 주세요.'); } });
+
+// ---------- save ----------
+function fileName(i){
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  return `cardnews_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}_${i+1}.png`;
+}
+function download(i){
+  return new Promise(res => {
+    const o = renderOff(i);
+    o.toBlob(b => { if (!b){ res(false); return; } const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = fileName(i); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); res(true); }, 'image/png');
+  });
+}
+$('#saveBtn').onclick = async () => { await document.fonts.ready; if (await download(active)) toast('다운로드 폴더에 저장했어요'); };
+async function saveAll(){
+  await document.fonts.ready;
+  const list = cards.map((c, i) => i).filter(i => cards[i].status === 'done');
+  if (!list.length){ toast('아직 완성된 카드가 없어요.'); return; }
+  for (const i of list){ await download(i); await new Promise(r => setTimeout(r, 500)); }
+  toast(`${list.length}장을 다운로드 폴더에 저장했어요`);
+}
+
+// ---------- boot ----------
+(async function boot(){
+  for (let i = 0; i < N; i++){
+    if (cards[i].photoData){
+      try{
+        const hi = cards[i].photoHiKey ? await idb.get(cards[i].photoHiKey) : null;
+        runtime[i].photo = await loadImage(hi || cards[i].photoData);
+      }catch(e){ cards[i].photoData = ''; cards[i].bgMode = 'auto'; }
+    }
+  }
+  if (!settings.apiKey){ $('#settings').hidden = false; fillSettings(); const s = $('#settingsStatus'); s.textContent = '처음 한 번만 API 키를 넣고 저장하세요.'; }
+  syncAll();
+  syncReelUI();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { runtime.forEach(r => r.bgKey = ''); requestRender(); renderTabs(); });
+})();
+})();
+</script>
+</body>
+</html>
