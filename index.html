@@ -558,7 +558,8 @@ function ensureFonts(){
     const sf = subFamOf(c, false), sf2 = subFamOf(c, true);
     const subTxt = (c.sub + ((c.reelTitles || []).map(x => (x && x.sub) || '').join(''))).replace(/\s/g,'') || '가나다';
     try{ await Promise.all([document.fonts.load(`${f.w} 64px "${f.fam}"`, txt), document.fonts.load(`${sf.w} 40px "${sf.fam}"`, subTxt), document.fonts.load(`${sf2.w} 40px "${sf2.fam}"`, subTxt), document.fonts.load('500 40px "Noto Sans KR"', txt), document.fonts.load('700 34px "Noto Sans KR"', txt)]); }catch(e){}
-    if (typeof moodF === 'function' && reel.scope === 'mood'){ const mf = moodF(), M = moodOf(c); const mt = ('가나다' + (M.series || '') + M.lines.map(l => (l.text || '') + (l.sub || '')).join('')).replace(/\s/g, ''); try{ await Promise.all([document.fonts.load(`${mf.w} 56px "${mf.fam}"`, mt), document.fonts.load('500 30px "Noto Sans KR"', mt)]); }catch(e){} }
+    if (typeof moodF === 'function' && reel.scope === 'mood'){ const mf = moodF(), M = moodOf(c); const mt = ('가나다' + (M.series || '') + M.lines.map(l => (l.text || '') + (l.sub || '')).join('')).replace(/\s/g, ''); try{ await Promise.all([document.fonts.load(`${mf.w} 56px "${mf.fam}"`, mt), document.fonts.load('500 30px "Noto Sans KR"', mt)]); }catch(e){}
+      const sff = seriesFam(c); if (sff){ try{ await document.fonts.load(`${sff.w} 30px "${sff.fam}"`, mt); }catch(e){} } }
     if (typeof isJa === 'function' && isJa()){ const f = jaF(); try{ await Promise.all([document.fonts.load(`${f.w} 64px "${f.fam}"`, 'あ日本語'), document.fonts.load('700 40px "Noto Sans JP"', 'あ日本語')]); }catch(e){} }
     try{ if (!playing) showStill(); }catch(e){}
     R().bgKey = ''; requestRender();
@@ -1009,7 +1010,7 @@ $('#moreTitles').onclick = async () => {
 // ---------- reels ----------
 const RW = 1080, RH = 1920;
 const reelCv = $('#reelCv'), rctx = reelCv.getContext('2d');
-const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodAlign:'center', seriesPos:'tc', seriesSize:30, moodSize:76, moodSubSize:40, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
+const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodAlign:'center', seriesPos:'tc', seriesSize:30, seriesFont:'base', seriesY:0, moodSize:76, moodSubSize:40, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
 if (reel.moodSize === 56 && !store.get('reel', {}).moodSubSize) reel.moodSize = 76;
 const plainT = t => String(t || '').replace(/[\[\]［］【】〔〕]/g, '').replace(/\s*\n\s*/g, ' ').trim();
 function narrOf(x){ if (x.narr != null) return x.narr; const end = t => /[.?!。？！]$/.test(t) ? t : t + '.'; return [plainT(x.title), plainT(x.sub)].filter(Boolean).map(end).join(' '); }
@@ -1780,6 +1781,12 @@ function moodOf(c){
   return c.mood;
 }
 const moodF = () => { if (reel.moodFont === 'card') return famOf(C()); const f = MOOD_FONTS.find(x => x[0] === reel.moodFont) || MOOD_FONTS[1]; return {fam:f[2], w:f[3]}; };
+function seriesFam(c){
+  const k = reel.seriesFont; if (!k || k === 'base') return null;
+  if (k === 'same') return moodF();
+  if (k === 'card') return famOf(c || C());
+  const f = MOOD_FONTS.find(x => x[0] === k); return f ? {fam:f[2], w:f[3]} : null;
+}
 function moodSpec(px){
   if (isJa()) return `400 ${px}px "Noto Serif JP", "Noto Sans JP", "Yu Mincho", serif`;
   const f = moodF(); return `${f.w} ${px}px "${f.fam}", "Noto Serif KR", serif`;
@@ -1858,8 +1865,12 @@ function drawMood(g, sc, t, D){
   if (series.trim()){
     const sp = reel.seriesPos || 'tc', ssz = reel.seriesSize || 30;
     const sx = sp[1] === 'l' ? RW * 0.07 : sp[1] === 'r' ? RW * 0.93 : RW / 2;
-    const sy = sp[0] === 'b' ? RH - 330 : RH * 0.11;
-    g.save(); g.globalAlpha = 0.85 * easeOut(t / 1.2); g.font = isJa() ? `500 ${ssz}px "Noto Sans JP", sans-serif` : `500 ${ssz}px "Noto Sans KR", sans-serif`;
+    const sy = (sp[0] === 'b' ? RH - 330 : RH * 0.11) + (reel.seriesY || 0);
+    let sfont = `500 ${ssz}px "Noto Sans KR", sans-serif`;
+    if (isJa()) sfont = `500 ${ssz}px "Noto Sans JP", sans-serif`;
+    else if (reel.seriesFont === 'same') sfont = moodSpec(ssz);
+    else if (reel.seriesFont && reel.seriesFont !== 'base'){ const sf = seriesFam(c); if (sf) sfont = `${sf.w} ${ssz}px "${sf.fam}", "Noto Sans KR", sans-serif`; }
+    g.save(); g.globalAlpha = 0.85 * easeOut(t / 1.2); g.font = sfont;
     setLS(g, Math.round(ssz * 0.2)); g.fillStyle = '#FFFFFF'; g.textAlign = sp[1] === 'l' ? 'left' : sp[1] === 'r' ? 'right' : 'center'; g.textBaseline = 'middle';
     g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 12; g.fillText(series, sx, sy); setLS(g, 0); g.restore();
   }
@@ -1920,7 +1931,13 @@ function renderMoodEditor(el, c){
     const ssz = document.createElement('input'); ssz.type = 'range'; ssz.id = 'seriesSize'; ssz.min = 20; ssz.max = 70; ssz.step = 2; ssz.value = reel.seriesSize || 30;
     const sszW = document.createElement('div'); const sszL = document.createElement('label'); sszL.className = 'lbl'; sszL.htmlFor = 'seriesSize'; const sszV = document.createElement('span'); sszV.textContent = (reel.seriesSize || 30) + 'px'; sszL.append('시리즈 이름 크기 ', sszV); sszW.append(sszL, ssz);
     ssz.oninput = () => { reel.seriesSize = Number(ssz.value); sszV.textContent = ssz.value + 'px'; saveReel(); if (!playing) showStill(); };
-    g2.append(mk('시리즈 이름 (작은 글씨, 비우면 안 나옴)', si, 'moodSeries'), mk('시리즈 이름 위치', spos, 'seriesPos'), sszW, mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'), mk('문장 정렬', al, 'moodAlign'));
+    const sfs = document.createElement('select'); sfs.id = 'seriesFont';
+    [['base','기본 (노토 산스)'],['same','감성 문장 글꼴과 같게']].concat(MOOD_FONTS.map(f => [f[0], f[1]])).forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sfs.append(o); }); sfs.value = reel.seriesFont || 'base';
+    sfs.onchange = () => { reel.seriesFont = sfs.value; saveReel(); ensureFonts(); if (!playing) showStill(); };
+    const syi = document.createElement('input'); syi.type = 'range'; syi.id = 'seriesY'; syi.min = -180; syi.max = 260; syi.step = 5; syi.value = reel.seriesY || 0;
+    const syW = document.createElement('div'); const syL = document.createElement('label'); syL.className = 'lbl'; syL.htmlFor = 'seriesY'; const syV = document.createElement('span'); syV.textContent = (reel.seriesY || 0); syL.append('시리즈 이름 높이 (위 ↔ 아래) ', syV); syW.append(syL, syi);
+    syi.oninput = () => { reel.seriesY = Number(syi.value); syV.textContent = syi.value; saveReel(); if (!playing) showStill(); };
+    g2.append(mk('시리즈 이름 (작은 글씨, 비우면 안 나옴)', si, 'moodSeries'), mk('시리즈 이름 위치', spos, 'seriesPos'), sszW, mk('시리즈 이름 글꼴', sfs, 'seriesFont'), syW, mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'), mk('문장 정렬', al, 'moodAlign'));
     el.append(g2);
     const opt = document.createElement('div'); opt.className = 'row';
     const snd = document.createElement('label'); snd.className = 'check'; const sc1 = document.createElement('input'); sc1.type = 'checkbox'; sc1.id = 'moodSound'; sc1.checked = !!reel.moodSound;
