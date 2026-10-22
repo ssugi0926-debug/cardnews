@@ -1009,7 +1009,7 @@ $('#moreTitles').onclick = async () => {
 // ---------- reels ----------
 const RW = 1080, RH = 1920;
 const reelCv = $('#reelCv'), rctx = reelCv.getContext('2d');
-const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodAlign:'center', moodSize:76, moodSubSize:40, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
+const reel = Object.assign({dur:6, motion:'mix', scope:'titles', vol:0.5, titleSize:88, subSize:54, anim:'type', offX:0, offY:0, gap:0, fx:'soft', fxStr:60, lang:'ko', jaFont:'njp', durMode:'narr', cps:6.5, moodFont:'gb4', moodPos:'center', moodAlign:'center', seriesPos:'tc', seriesSize:30, moodSize:76, moodSubSize:40, moodSound:true, moodSoundVol:0.8, moodGrain:true}, store.get('reel', {}));
 if (reel.moodSize === 56 && !store.get('reel', {}).moodSubSize) reel.moodSize = 76;
 const plainT = t => String(t || '').replace(/[\[\]［］【】〔〕]/g, '').replace(/\s*\n\s*/g, ' ').trim();
 function narrOf(x){ if (x.narr != null) return x.narr; const end = t => /[.?!。？！]$/.test(t) ? t : t + '.'; return [plainT(x.title), plainT(x.sub)].filter(Boolean).map(end).join(' '); }
@@ -1856,9 +1856,12 @@ function drawMood(g, sc, t, D){
   const M = moodOf(c);
   const series = (sc.series != null ? sc.series : M.series) || '';
   if (series.trim()){
-    g.save(); g.globalAlpha = 0.85 * easeOut(t / 1.2); g.font = isJa() ? '500 30px "Noto Sans JP", sans-serif' : '500 30px "Noto Sans KR", sans-serif';
-    setLS(g, 6); g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 12; g.fillText(series, RW / 2, RH * 0.11); setLS(g, 0); g.restore();
+    const sp = reel.seriesPos || 'tc', ssz = reel.seriesSize || 30;
+    const sx = sp[1] === 'l' ? RW * 0.07 : sp[1] === 'r' ? RW * 0.93 : RW / 2;
+    const sy = sp[0] === 'b' ? RH - 330 : RH * 0.11;
+    g.save(); g.globalAlpha = 0.85 * easeOut(t / 1.2); g.font = isJa() ? `500 ${ssz}px "Noto Sans JP", sans-serif` : `500 ${ssz}px "Noto Sans KR", sans-serif`;
+    setLS(g, Math.round(ssz * 0.2)); g.fillStyle = '#FFFFFF'; g.textAlign = sp[1] === 'l' ? 'left' : sp[1] === 'r' ? 'right' : 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 12; g.fillText(series, sx, sy); setLS(g, 0); g.restore();
   }
   // the line
   const fs = reel.moodSize || 76, sfs = reel.moodSubSize || 40, lh = fs * 1.55;
@@ -1912,7 +1915,12 @@ function renderMoodEditor(el, c){
     pos.onchange = () => { reel.moodPos = pos.value; saveReel(); if (!playing) showStill(); };
     const al = document.createElement('select'); al.id = 'moodAlign'; [['center','가운데 정렬'],['left','왼쪽 정렬'],['right','오른쪽 정렬']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; al.append(o); }); al.value = reel.moodAlign || 'center';
     al.onchange = () => { reel.moodAlign = al.value; reel.offX = 0; saveReel(); if (!playing) showStill(); };
-    g2.append(mk('시리즈 이름 (위쪽 작은 글씨)', si, 'moodSeries'), mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'), mk('문장 정렬', al, 'moodAlign'));
+    const spos = document.createElement('select'); spos.id = 'seriesPos'; [['tc','위 가운데'],['tl','위 왼쪽'],['tr','위 오른쪽'],['bl','아래 왼쪽'],['bc','아래 가운데'],['br','아래 오른쪽']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; spos.append(o); }); spos.value = reel.seriesPos || 'tc';
+    spos.onchange = () => { reel.seriesPos = spos.value; saveReel(); if (!playing) showStill(); };
+    const ssz = document.createElement('input'); ssz.type = 'range'; ssz.id = 'seriesSize'; ssz.min = 20; ssz.max = 70; ssz.step = 2; ssz.value = reel.seriesSize || 30;
+    const sszW = document.createElement('div'); const sszL = document.createElement('label'); sszL.className = 'lbl'; sszL.htmlFor = 'seriesSize'; const sszV = document.createElement('span'); sszV.textContent = (reel.seriesSize || 30) + 'px'; sszL.append('시리즈 이름 크기 ', sszV); sszW.append(sszL, ssz);
+    ssz.oninput = () => { reel.seriesSize = Number(ssz.value); sszV.textContent = ssz.value + 'px'; saveReel(); if (!playing) showStill(); };
+    g2.append(mk('시리즈 이름 (작은 글씨, 비우면 안 나옴)', si, 'moodSeries'), mk('시리즈 이름 위치', spos, 'seriesPos'), sszW, mk('문장 글꼴', fsel, 'moodFont'), mk('문장 위치', pos, 'moodPos'), mk('문장 정렬', al, 'moodAlign'));
     el.append(g2);
     const opt = document.createElement('div'); opt.className = 'row';
     const snd = document.createElement('label'); snd.className = 'check'; const sc1 = document.createElement('input'); sc1.type = 'checkbox'; sc1.id = 'moodSound'; sc1.checked = !!reel.moodSound;
