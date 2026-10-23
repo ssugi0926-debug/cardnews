@@ -218,8 +218,12 @@ a{color:var(--accent)}
       </div>
       <div id="localFontRow" class="keyrow" hidden><input type="text" id="localFontName" placeholder="예: 배달의민족 도현, Pretendard"><button class="small" id="applyLocalFont">적용</button></div>
       <div class="grid2">
-        <div><label class="lbl" for="size">글자 크기 <span id="sizeVal"></span></label><input type="range" id="size" min="56" max="160" step="2"></div>
+        <div><label class="lbl" for="size">제목 글자 크기 <span id="sizeVal"></span></label><input type="range" id="size" min="56" max="160" step="2"></div>
+        <div><label class="lbl" for="subSize">보조 문구 크기 <span id="subSizeVal"></span></label><input type="range" id="subSize" min="26" max="80" step="2"></div>
+      </div>
+      <div class="grid2">
         <div><label class="lbl" for="shade">아래쪽 어둡게</label><input type="range" id="shade" min="0" max="0.9" step="0.05"></div>
+        <div></div>
       </div>
       <div class="grid2">
         <div><label class="lbl" for="lineH">제목 줄 간격 <span id="lineHVal"></span></label><input type="range" id="lineH" min="0.9" max="1.8" step="0.02"></div>
@@ -369,12 +373,12 @@ const TONES = {
   advice:'말투: 인생 조언형. 40~70대에게 인생 선배가 조용히 건네는 말처럼 따뜻하지만 단단한 존댓말. 훈계·명령조("~해야 한다") 대신 권유와 공감("~해보면 어떨까요", "~더라고요"). 구체적인 장면 하나를 넣고 문장은 짧게. 제목은 여운이 남는 한 문장.'
 };
 function styleRules(){ const t = TONES[settings.tone] || TONES.news; const x = (settings.extraRules || '').trim(); return t + (x ? '\n추가 요청(반드시 지킨다): ' + x : ''); }
-const style = Object.assign({lineH:1.24, letterSp:0, fx:'soft', fxStr:55, font:'bh', subFont:'base', customFamily:'', size:104, shade:0.55, align:'left', color:'#FFFFFF', hi:'#FFD43B'}, store.get('style', {}));
+const style = Object.assign({subSize:40, lineH:1.24, letterSp:0, fx:'soft', fxStr:55, font:'bh', subFont:'base', customFamily:'', size:104, shade:0.55, align:'left', color:'#FFFFFF', hi:'#FFD43B'}, store.get('style', {}));
 
 function blankCard(){
   return {photoHiKey:'', mode:'news', url:'', article:'', titles:[], title:'', sub:'', tag:'', keyword:'', aiPalette:{bg1:'#14213D',bg2:'#2E4A7D',accent:'#7FB3FF'},
     theme:'ai', seed:Math.floor(Math.random()*1e9), bgMode:'auto', photoData:'', imagePrompt:'',
-    lineH:style.lineH || 1.24, letterSp:style.letterSp || 0, fx:style.fx || 'soft', fxStr:style.fxStr == null ? 55 : style.fxStr,
+    subSize:style.subSize || 40, lineH:style.lineH || 1.24, letterSp:style.letterSp || 0, fx:style.fx || 'soft', fxStr:style.fxStr == null ? 55 : style.fxStr,
     font:style.font, subFont:style.subFont || 'base', customFamily:style.customFamily, size:style.size, shade:style.shade, align:style.align, color:style.color, hi:style.hi,
     bx:0.07, by:0.55, handle:settings.handle, source:'', captions:{explain:'',empathy:'',poll:''}, capType:'empathy', hashtags:'', status:'empty', msg:''};
 }
@@ -501,7 +505,7 @@ function drawCard(ctx, i){
   ctx.imageSmoothingQuality = 'high'; ctx.drawImage(buildBg(i), 0, 0, W, H);
   if (c.shade > 0){ const sg = ctx.createLinearGradient(0, H*0.28, 0, H); sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(1,`rgba(0,0,0,${c.shade})`); ctx.fillStyle = sg; ctx.fillRect(0,0,W,H); }
   const maxW = W*0.86, left = c.bx*W, top = c.by*H, fs = c.size, lh = fs*(c.lineH || 1.24);
-  const FX = cardFx(c);
+  const FX = cardFx(c), SS = c.subSize || 40, SLH = Math.round(SS * 1.35);
   const title = c.title || (c.status === 'empty' ? '기사를 넣고\n[만들기]를 눌러주세요' : '');
   ctx.textBaseline = 'top';
   if (c.tag.trim()){
@@ -515,13 +519,13 @@ function drawCard(ctx, i){
   const tLines = layout(ctx, title, maxW);
   const subStr = c.sub.replace(/[\[\]［］【】〔〕]/g,'');
   let sLines = [];
-  if (c.sub.trim()){ setLS(ctx, 0); ctx.font = subFontSpec(c, 40, false); sLines = layout(ctx, subStr, maxW); ctx.font = fontSpec(c, fs); setLS(ctx, c.letterSp); }
+  if (c.sub.trim()){ setLS(ctx, 0); ctx.font = subFontSpec(c, SS, false); sLines = layout(ctx, subStr, maxW); ctx.font = fontSpec(c, fs); setLS(ctx, c.letterSp); }
   if (FX.fx === 'box' && title){
     let wMax = 0; for (const line of tLines){ wMax = Math.max(wMax, ctx.measureText(strOf(line)).width); }
-    setLS(ctx, 0); ctx.font = subFontSpec(c, 40, false); for (const line of sLines){ wMax = Math.max(wMax, ctx.measureText(strOf(line)).width); }
+    setLS(ctx, 0); ctx.font = subFontSpec(c, SS, false); for (const line of sLines){ wMax = Math.max(wMax, ctx.measureText(strOf(line)).width); }
     ctx.font = fontSpec(c, fs); setLS(ctx, c.letterSp);
     const pad = Math.round(fs * 0.36), k = FX.fxStr / 100;
-    const bh = tLines.length * lh + (sLines.length ? fs * 0.18 + sLines.length * 54 : 0) + pad * 1.4;
+    const bh = tLines.length * lh + (sLines.length ? fs * 0.18 + sLines.length * SLH : 0) + pad * 1.4;
     const bx = c.align === 'center' ? left + (maxW - wMax)/2 - pad : left - pad;
     ctx.fillStyle = `rgba(${fxShade(c)},${0.3 + 0.45 * k})`; rr(ctx, Math.max(12, bx), top - pad * 0.7, Math.min(W - 24, wMax + pad * 2), bh, Math.round(fs * 0.2)); ctx.fill();
   }
@@ -535,8 +539,8 @@ function drawCard(ctx, i){
   }
   setLS(ctx, 0);
   if (sLines.length){
-    y += fs*0.18; ctx.font = subFontSpec(c, 40, false); ctx.fillStyle = hexA(c.color, 0.9); fxSet(ctx, c, 40, FX);
-    for (const line of sLines){ const t = strOf(line), tw = ctx.measureText(t).width; fxText(ctx, c, t, c.align === 'center' ? left + (maxW - tw)/2 : left, y, 40, FX); y += 54; }
+    y += fs*0.18; ctx.font = subFontSpec(c, SS, false); ctx.fillStyle = hexA(c.color, 0.9); fxSet(ctx, c, SS, FX);
+    for (const line of sLines){ const t = strOf(line), tw = ctx.measureText(t).width; fxText(ctx, c, t, c.align === 'center' ? left + (maxW - tw)/2 : left, y, SS, FX); y += SLH; }
   }
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.shadowColor = 'transparent';
   ctx.textBaseline = 'alphabetic';
@@ -655,6 +659,7 @@ function syncAll(){
   $('#url').value = c.url; $('#article').value = c.article;
   $('#title').value = c.title; $('#sub').value = c.sub; $('#tag').value = c.tag;
   $('#font').value = c.font; $('#size').value = c.size; $('#sizeVal').textContent = c.size + 'px';
+  $('#subSize').value = c.subSize || 40; $('#subSizeVal').textContent = (c.subSize || 40) + 'px';
   $('#lineH').value = c.lineH || 1.24; $('#lineHVal').textContent = (c.lineH || 1.24).toFixed(2) + '배';
   $('#letterSp').value = c.letterSp || 0; $('#letterSpVal').textContent = (c.letterSp || 0) + 'px';
   $('#cardFx').value = c.fx || 'soft'; $('#cardFxStr').value = c.fxStr == null ? 55 : c.fxStr; $('#cardFxStrVal').textContent = (c.fxStr == null ? 55 : c.fxStr) + '%'; $('#cardFxStr').disabled = c.fx === 'none';
@@ -667,17 +672,18 @@ function syncAll(){
   renderChips(); syncCaption(); syncVeil(); syncStatus(); renderTabs(); ensureFonts(); requestRender();
 }
 function rememberStyle(){
-  const c = C(); Object.assign(style, {lineH:c.lineH, letterSp:c.letterSp, fx:c.fx, fxStr:c.fxStr, font:c.font, subFont:c.subFont || 'base', customFamily:c.customFamily, size:c.size, shade:c.shade, align:c.align, color:c.color, hi:c.hi}); store.set('style', style);
+  const c = C(); Object.assign(style, {subSize:c.subSize || 40, lineH:c.lineH, letterSp:c.letterSp, fx:c.fx, fxStr:c.fxStr, font:c.font, subFont:c.subFont || 'base', customFamily:c.customFamily, size:c.size, shade:c.shade, align:c.align, color:c.color, hi:c.hi}); store.set('style', style);
 }
 const bind = (id, key, num, isStyle) => $('#'+id).addEventListener('input', e => {
   const c = C(); c[key] = num ? Number(e.target.value) : e.target.value;
   if (key === 'size') $('#sizeVal').textContent = c.size + 'px';
+  if (key === 'subSize') $('#subSizeVal').textContent = c.subSize + 'px';
   if (key === 'title') renderChips();
   if (isStyle) rememberStyle();
   persist(); ensureFonts(); requestRender();
 });
 bind('url','url'); bind('article','article'); bind('title','title'); bind('sub','sub'); bind('tag','tag'); bind('handle','handle'); bind('source','source');
-bind('size','size',true,true); bind('lineH','lineH',true,true); bind('letterSp','letterSp',true,true); bind('cardFxStr','fxStr',true,true);
+bind('size','size',true,true); bind('subSize','subSize',true,true); bind('lineH','lineH',true,true); bind('letterSp','letterSp',true,true); bind('cardFxStr','fxStr',true,true);
 ['lineH','letterSp','cardFxStr'].forEach(id => $('#'+id).addEventListener('input', () => { const c = C(); $('#lineHVal').textContent = (c.lineH || 1.24).toFixed(2) + '배'; $('#letterSpVal').textContent = (c.letterSp || 0) + 'px'; $('#cardFxStrVal').textContent = c.fxStr + '%'; if (!playing) showStill(); }));
 $('#cardFx').addEventListener('change', e => { const c = C(); c.fx = e.target.value; $('#cardFxStr').disabled = c.fx === 'none'; rememberStyle(); persist(); requestRender(); }); bind('shade','shade',true,true); bind('color','color',false,true); bind('hi','hi',false,true); bind('imgPrompt','imagePrompt');
 $('#url').addEventListener('change', renderTabs); $('#article').addEventListener('change', renderTabs);
@@ -1946,7 +1952,7 @@ function renderMoodEditor(el, c){
     gc1.onchange = () => { reel.moodGrain = gc1.checked; saveReel(); if (!playing) showStill(); }; grn.append(gc1, ' 필름 질감');
     opt.append(snd, grn); el.append(opt);
     const aiRow = document.createElement('div'); aiRow.className = 'row';
-    const cnt = document.createElement('select'); cnt.id = 'moodCount'; [1, 2, 3].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = '장면 ' + n + '개'; cnt.append(o); }); cnt.value = M.count || 2;
+    const cnt = document.createElement('select'); cnt.id = 'moodCount'; [1, 2, 3, 4, 5, 6].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = '장면 ' + n + '개'; cnt.append(o); }); cnt.value = Math.min(6, M.count || Math.max(2, M.lines.length));
     cnt.onchange = () => { M.count = Number(cnt.value); persist(); };
     const ai = document.createElement('button'); ai.type = 'button'; ai.className = 'small'; ai.id = 'moodAI'; ai.textContent = 'AI로 감성 문장 쓰기';
     const st = document.createElement('span'); st.className = 'status'; st.id = 'moodAIStatus';
@@ -1964,11 +1970,11 @@ function renderMoodEditor(el, c){
       sd.addEventListener('input', () => { ln.scene = sd.value; persist(); });
       const media = imgRowEl(ln, n, sceneDesc, true);
       const del = document.createElement('button'); del.type = 'button'; del.className = 'small'; del.textContent = '이 장면 빼기';
-      del.onclick = () => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); M.lines.splice(n, 1); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); if (!playing) showStill(); };
+      del.onclick = () => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); M.lines.splice(n, 1); if (M.lines.length) M.count = M.lines.length; M.ver = (M.ver || 0) + 1; persist(); syncPickList(); if (!playing) showStill(); };
       row.append(lab, ti, sub, sd, narrRowEl(ln, n, ln.text, ln.sub), media, del); el.append(row);
     });
     const add = document.createElement('button'); add.type = 'button'; add.className = 'small'; add.textContent = '+ 장면 직접 추가';
-    add.onclick = () => { M.lines.push({text:'', sub:''}); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); };
+    add.onclick = () => { M.lines.push({text:'', sub:''}); M.count = Math.max(M.count || 2, M.lines.length); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); };
     el.append(add);
     if (M.lines.length){
       const nRow = document.createElement('div'); nRow.className = 'row';
@@ -1982,7 +1988,7 @@ function renderMoodEditor(el, c){
   refreshSecs();
 }
 async function fillMoodAI(st, btn){
-  const c = C(), M = moodOf(c), n = M.count || 2;
+  const c = C(), M = moodOf(c), n = Math.max(M.count || 2, M.lines.length);
   const topic = (c.mode === 'topic' ? c.article : '') || plainT(c.title) || '';
   if (!topic.trim()){ st.className = 'status err'; st.textContent = 'STEP 1에 주제를 한 줄 적어주세요. (예: 비 오는 날 혼자 마시는 차)'; return; }
   btn.disabled = true; st.className = 'status'; st.textContent = '쓰는 중…';
@@ -2002,8 +2008,13 @@ ${styleRules()}
 JSON 하나만 출력: {"series":"...","lines":[{"text":"...","sub":"","scene":"..."}]} (lines 정확히 ${n}개, sub는 필요할 때만 12자 이내)`, {json:true}));
     const lines = Array.isArray(d && d.lines) ? d.lines.filter(x => x && typeof x.text === 'string') : [];
     if (!lines.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
-    M.lines.forEach(ln => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); });
-    M.lines = lines.slice(0, n).map(x => ({text:plainT(x.text), sub:typeof x.sub === 'string' ? plainT(x.sub) : '', scene:typeof x.scene === 'string' ? x.scene.trim() : ''}));
+    const old = M.lines;
+    M.lines = lines.slice(0, n).map((x, i) => {
+      const o = old[i] || {};
+      return Object.assign({}, o, {text:plainT(x.text), sub:typeof x.sub === 'string' ? plainT(x.sub) : '', scene:(o.scene && o.scene.trim()) ? o.scene : (typeof x.scene === 'string' ? x.scene.trim() : ''), narr:undefined});
+    });
+    old.slice(M.lines.length).forEach(ln => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); });
+    M.count = M.lines.length;
     if (typeof d.series === 'string' && !M.series) M.series = d.series.trim();
     M.ver = (M.ver || 0) + 1; persist(); pickKey = ''; showStill();
     const s2 = $('#moodAIStatus'); if (s2){ s2.className = 'status ok'; s2.textContent = '썼어요. 장면마다 그림을 그리거나 사진·영상을 올려보세요.'; }
