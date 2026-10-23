@@ -1211,7 +1211,7 @@ function drawReel(g, sc, t, D, plan){
 function reelList(){
   let l;
   if (reel.scope === 'all'){ const ids = cards.map((c, i) => i).filter(i => cards[i].status === 'done'); l = (ids.length ? ids : [active]).map(i => ({i, title:cards[i].title, sub:cards[i].sub, end:true})); }
-  else if (reel.scope === 'titles' && picksOf(C()).length){ const ts = picksOf(C()); l = ts.map((x, k) => ({i:active, title:x.title, sub:x.sub, end:k === ts.length - 1, narr:narrOf(x), secs:x.secs, imgKey:x.imgKey})); }
+  else if (reel.scope === 'titles' && picksOf(C()).length){ const ts = picksOf(C()); l = ts.map((x, k) => ({i:active, title:x.title, disp:x.disp, sub:x.sub, end:k === ts.length - 1, narr:narrOf(x), secs:x.secs, imgKey:x.imgKey})); }
   else if (reel.scope === 'mood'){
     const c0 = C(), M = moodOf(c0);
     const src = M.lines.length ? M.lines : [{text:plainT(c0.title) || '', sub:''}];
@@ -1235,6 +1235,8 @@ function reelList(){
       if (J && J.map && J.map[x.title]){ x.sub = J.subMap && J.subMap[x.title + '§' + (x.sub || '')] != null ? J.subMap[x.title + '§' + (x.sub || '')] : (J.map[x.title + '§sub'] || x.sub); x.title = J.map[x.title]; if (x.narr != null) x.narr = [plainT(x.title), plainT(x.sub)].filter(Boolean).join('。') + '。'; }
     });
   }
+  l.forEach(x => { if (x.disp && x.disp.trim() && !(isJa() && !x.jaMissing)) x.title = x.disp.replace(/\s*\/\s*/g, '\n'); });
+  l.forEach(x => { if (x.sub && x.kind !== 'mood') x.sub = String(x.sub).replace(/\s+\/\s+/g, '\n'); });
   const extra = l.length > 1 ? 2 : 0;
   return l.map((x, n) => {
     let d = reel.dur;
@@ -1425,9 +1427,14 @@ function syncPickList(){
         const row = document.createElement('div'); row.className = 'pk-row';
         const lab = document.createElement('label'); lab.className = 'pk-title'; lab.htmlFor = 'pkSub' + k;
         lab.textContent = `${k + 1}. ${x.title.replace(/[\[\]［］【】〔〕]/g, '').replace(/\n/g, ' ')}`;
-        const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'pkSub' + k; inp.value = x.sub || ''; inp.placeholder = '이 장면의 보조 문구 (비우면 안 나와요)';
+        const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'pkSub' + k; inp.value = x.sub || ''; inp.placeholder = '이 장면의 보조 문구 (비우면 안 나와요 · 줄 바꿀 곳에 " / ")';
         inp.addEventListener('input', () => { x.sub = inp.value; persist(); if (!playing) showStill(); });
-        row.append(lab, inp);
+        const dt = document.createElement('input'); dt.type = 'text'; dt.id = 'pkDisp' + k; dt.className = 'pk-disp';
+        dt.value = x.disp || x.title.replace(/\n/g, ' / '); dt.setAttribute('aria-label', '장면 ' + (k + 1) + ' 화면 제목');
+        dt.title = '줄을 바꾸고 싶은 곳에 / 를 넣으세요. [ ] 안은 강조색';
+        dt.addEventListener('input', () => { const v = dt.value; x.disp = v.trim() && v !== x.title.replace(/\n/g, ' / ') ? v : ''; persist(); if (!playing) showStill(); });
+        const dh = document.createElement('div'); dh.className = 'pk-ja'; dh.textContent = '화면에 나오는 제목 · 줄 바꿀 곳에 " / " 넣기, [ ] 안은 강조색';
+        row.append(lab, dh, dt, inp);
         if (reel.durMode === 'narr'){
           const nr = document.createElement('textarea'); nr.rows = 2; nr.id = 'pkNarr' + k; nr.className = 'pk-narr'; nr.value = narrOf(x); nr.setAttribute('aria-label', '장면 ' + (k + 1) + ' 내레이션');
           nr.placeholder = '이 장면에서 목소리로 읽을 문장';
