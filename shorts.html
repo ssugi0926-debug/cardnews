@@ -285,7 +285,12 @@ async function addFiles(list){
   if(!fs.length)return;
   if(clips.every(c=>c.sample))clips=[];
   for(const f of fs){
-    const img=await loadImg(URL.createObjectURL(f));
+    const url=URL.createObjectURL(f);
+    let src;try{src=await loadImg(url)}catch{continue}
+    // 폰 원본(4000px 이상)은 그리기가 느려서 긴 변 1600px로 줄여 둠
+    const iw=src.naturalWidth,ih=src.naturalHeight,k=Math.min(1,1600/Math.max(iw,ih));
+    const img=document.createElement('canvas');img.width=Math.round(iw*k);img.height=Math.round(ih*k);
+    img.getContext('2d').drawImage(src,0,0,img.width,img.height);URL.revokeObjectURL(url);
     clips.push({img,motion:ORDER[clips.length%ORDER.length],name:f.name.replace(/\.[^.]+$/,''),file:f});
   }
   renderThumbs();drawAt(0);
@@ -424,26 +429,56 @@ function pickMime(){
   const c=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   return c.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'';
 }
+let recState=null; // {rec, cancelled, watchdog}
+function recReset(){
+  cancelAnimationFrame(raf);
+  if(recState){clearTimeout(recState.watchdog);clearInterval(recState.ticker)}
+  recState=null;$('rec').textContent='영상 만들기';$('play').disabled=false;
+}
+function recAbort(msg){
+  if(!recState)return;
+  recState.cancelled=true;
+  try{recState.rec.state!=='inactive'&&recState.rec.stop()}catch{}
+  recReset();drawAt(0.6);updateTime(0);setRec(msg,true);
+}
 $('rec').onclick=async()=>{
+  if(recState){recAbort('영상 만들기를 취소했습니다.');return}
   if(!clips.length)return;
-  if(!window.MediaRecorder||!stage.captureStream){setRec('이 브라우저는 영상 녹화를 지원하지 않습니다. 크롬이나 엣지에서 열어 주세요.',true);return}
+  if(!window.MediaRecorder||!stage.captureStream){setRec('이 브라우저는 영상 녹화를 지원하지 않습니다. 크롬, 삼성 인터넷, 사파리 최신 버전에서 열어 주세요.',true);return}
   await document.fonts.ready;
   showStage();playing=false;$('play').textContent='▶ 재생';
   const mime=pickMime();videoExt=mime.includes('mp4')?'mp4':'webm';
-  const rec=new MediaRecorder(stage.captureStream(30),mime?{mimeType:mime,videoBitsPerSecond:8e6}:{});
+  let rec;
+  try{rec=new MediaRecorder(stage.captureStream(30),mime?{mimeType:mime,videoBitsPerSecond:6e6}:{})}
+  catch{setRec('이 브라우저에서는 영상을 녹화할 수 없어요. 다른 브라우저로 열어 주세요.',true);return}
+  const st=recState={rec,cancelled:false,watchdog:0,ticker:0};
   const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  rec.onerror=()=>recAbort('녹화 중 오류가 났어요. 다시 눌러 주세요.');
   rec.onstop=()=>{
+    if(st.cancelled||recState!==st)return;
+    recReset();
     videoBlob=new Blob(chunks,{type:mime||'video/webm'});
+    if(!videoBlob.size){setRec('영상이 비어 있어요. 화면을 켜 둔 채 다시 눌러 주세요.',true);return}
     const v=$('out');v.src=URL.createObjectURL(videoBlob);v.hidden=false;stage.hidden=true;
-    $('rec').disabled=$('play').disabled=false;
     setRec(`완성! ${(videoBlob.size/1048576).toFixed(1)}MB ${videoExt.toUpperCase()} 영상입니다.`);
     $('save').hidden=false;
   };
-  $('rec').disabled=$('play').disabled=true;$('save').hidden=true;
-  setRec('영상을 만드는 중… 재생 시간만큼 걸립니다.');
-  drawAt(0);rec.start(200);
-  run(()=>setTimeout(()=>rec.stop(),150));
+  $('rec').textContent='만들기 취소';$('play').disabled=true;$('save').hidden=true;
+  const T=total(),t0=performance.now();
+  const tick=()=>{const left=Math.max(0,T-(performance.now()-t0)/1000);
+    setRec(`영상 만드는 중 ${Math.min(99,Math.round((1-left/T)*100))}% · 약 ${Math.ceil(left)}초 남음 — 화면을 켜 두고 이 화면에 머물러 주세요.`)};
+  tick();st.ticker=setInterval(tick,500);
+  drawAt(0);rec.start(250);
+  run(()=>{
+    if(recState!==st)return;
+    clearInterval(st.ticker);setRec('마무리하는 중…');
+    setTimeout(()=>{try{rec.stop()}catch{}},150);
+    st.watchdog=setTimeout(()=>{if(recState===st)recAbort('영상 마무리가 안 돼요. 다시 눌러 주세요. 계속되면 크롬에서 열어 주세요.')},8000);
+  });
 };
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&recState)recAbort('다른 화면으로 넘어가서 멈췄어요. 이 화면을 켜 둔 채 다시 눌러 주세요.');
+});
 function setRec(m,err){const s=$('recStatus');s.textContent=m;s.classList.toggle('err',!!err)}
 
 $('save').onclick=async()=>{
