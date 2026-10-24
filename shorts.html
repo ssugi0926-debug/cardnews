@@ -432,8 +432,8 @@ function pickMime(){
 let recState=null; // {rec, cancelled, watchdog}
 function recReset(){
   cancelAnimationFrame(raf);
-  if(recState){clearTimeout(recState.watchdog);clearInterval(recState.ticker)}
-  recState=null;$('rec').textContent='영상 만들기';$('play').disabled=false;
+  if(recState){clearTimeout(recState.watchdog);clearTimeout(recState.endTimer);clearInterval(recState.ticker);clearInterval(recState.frames)}
+  recState=null;$('rec').textContent='영상 만들기';$('play').disabled=false;$('dur').disabled=false;
 }
 function recAbort(msg){
   if(!recState)return;
@@ -463,18 +463,24 @@ $('rec').onclick=async()=>{
     setRec(`완성! ${(videoBlob.size/1048576).toFixed(1)}MB ${videoExt.toUpperCase()} 영상입니다.`);
     $('save').hidden=false;
   };
-  $('rec').textContent='만들기 취소';$('play').disabled=true;$('save').hidden=true;
+  $('rec').textContent='만들기 취소';$('play').disabled=true;$('dur').disabled=true;$('save').hidden=true;
   const T=total(),t0=performance.now();
   const tick=()=>{const left=Math.max(0,T-(performance.now()-t0)/1000);
     setRec(`영상 만드는 중 ${Math.min(99,Math.round((1-left/T)*100))}% · 약 ${Math.ceil(left)}초 남음 — 화면을 켜 두고 이 화면에 머물러 주세요.`)};
   tick();st.ticker=setInterval(tick,500);
+  // 화면 그리기는 타이머로 직접 돌리고(rAF가 멈추는 폰 대비), 끝나는 시점도 시계로 따로 정함
+  cancelAnimationFrame(raf);
   drawAt(0);rec.start(250);
-  run(()=>{
+  st.frames=setInterval(()=>{
+    const t=Math.min(T-0.001,(performance.now()-t0)/1000);drawAt(t);updateTime(t);
+  },1000/30);
+  st.endTimer=setTimeout(()=>{
     if(recState!==st)return;
-    clearInterval(st.ticker);setRec('마무리하는 중…');
-    setTimeout(()=>{try{rec.stop()}catch{}},150);
+    clearInterval(st.frames);clearInterval(st.ticker);
+    drawAt(T-0.001);updateTime(T);setRec('마무리하는 중…');
+    setTimeout(()=>{try{rec.requestData?.()}catch{} try{rec.stop()}catch{}},200);
     st.watchdog=setTimeout(()=>{if(recState===st)recAbort('영상 마무리가 안 돼요. 다시 눌러 주세요. 계속되면 크롬에서 열어 주세요.')},8000);
-  });
+  },T*1000+50);
 };
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&recState)recAbort('다른 화면으로 넘어가서 멈췄어요. 이 화면을 켜 둔 채 다시 눌러 주세요.');
