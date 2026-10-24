@@ -1974,11 +1974,12 @@ function renderMoodEditor(el, c){
       sub.addEventListener('input', () => { ln.sub = sub.value; persist(); if (!playing) showStill(); });
       const sceneDesc = ln.scene || ln.text || '';
       const sd = document.createElement('input'); sd.type = 'text'; sd.id = 'moodScene' + n; sd.value = ln.scene || ''; sd.placeholder = '배경 장면 설명 (그림 그릴 때 사용, 예: 비 오는 창가의 찻잔)';
-      sd.addEventListener('input', () => { ln.scene = sd.value; persist(); });
+      sd.addEventListener('input', () => { ln.scene = sd.value; ln.sceneUser = !!sd.value.trim(); persist(); });
       const media = imgRowEl(ln, n, sceneDesc, true);
       const del = document.createElement('button'); del.type = 'button'; del.className = 'small'; del.textContent = '이 장면 빼기';
       del.onclick = () => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); M.lines.splice(n, 1); if (M.lines.length) M.count = M.lines.length; M.ver = (M.ver || 0) + 1; persist(); syncPickList(); if (!playing) showStill(); };
-      row.append(lab, ti, sub, sd, narrRowEl(ln, n, ln.text, ln.sub), media, del); el.append(row);
+      const L = t => { const d = document.createElement('div'); d.className = 'pk-ja'; d.textContent = t; return d; };
+      row.append(lab, L('화면 문장 (줄 바꿀 곳에 " / ")'), ti, L('작은 두 번째 줄 (화면에 작게)'), sub, L('그림용 장면 설명 (화면에 안 나와요 · "이 장면 그림 그리기"에 쓰여요)'), sd, (reel.durMode === 'narr' ? L('내레이션 (브루 목소리용)') : ''), narrRowEl(ln, n, ln.text, ln.sub), media, del); el.append(row);
     });
     const add = document.createElement('button'); add.type = 'button'; add.className = 'small'; add.textContent = '+ 장면 직접 추가';
     add.onclick = () => { M.lines.push({text:'', sub:''}); M.count = Math.max(M.count || 2, M.lines.length); M.ver = (M.ver || 0) + 1; persist(); syncPickList(); };
@@ -2012,13 +2013,15 @@ ${styleRules()}
 
 주제: ${topic.slice(0, 2000)}
 
-JSON 하나만 출력: {"series":"...","lines":[{"text":"...","sub":"","scene":"..."}]} (lines 정확히 ${n}개, sub는 필요할 때만 12자 이내)`, {json:true}));
+- sub: 문장 아래 작게 붙는 두 번째 줄. 장면마다 반드시 쓴다. 8~14자, 문장의 여운을 이어받는 짧은 말 (예: 오늘은 나를 위해). 문장을 반복하지 않는다.
+
+JSON 하나만 출력: {"series":"...","lines":[{"text":"...","sub":"...","scene":"..."}]} (lines 정확히 ${n}개)`, {json:true}));
     const lines = Array.isArray(d && d.lines) ? d.lines.filter(x => x && typeof x.text === 'string') : [];
     if (!lines.length) throw new Error('결과 형식이 깨졌어요. 한 번 더 눌러 주세요.');
     const old = M.lines;
     M.lines = lines.slice(0, n).map((x, i) => {
       const o = old[i] || {};
-      return Object.assign({}, o, {text:plainT(x.text), sub:typeof x.sub === 'string' ? plainT(x.sub) : '', scene:(o.scene && o.scene.trim()) ? o.scene : (typeof x.scene === 'string' ? x.scene.trim() : ''), narr:undefined});
+      return Object.assign({}, o, {text:plainT(x.text), sub:typeof x.sub === 'string' ? plainT(x.sub) : '', scene:(o.sceneUser && o.scene && o.scene.trim()) ? o.scene : (typeof x.scene === 'string' ? x.scene.trim() : (o.scene || '')), narr:undefined});
     });
     old.slice(M.lines.length).forEach(ln => { if (ln.imgKey) idb.del(ln.imgKey); if (ln.vidKey) idb.del(ln.vidKey); });
     M.count = M.lines.length;
