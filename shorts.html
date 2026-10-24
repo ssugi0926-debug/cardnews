@@ -28,6 +28,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:22px}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,5vw,44px);line-height:1.05;margin:0;letter-spacing:-.01em}
 h1 span{color:var(--accent)}
+.ver{margin:4px 0 0;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .sub{color:var(--muted);margin:6px 0 0;max-width:60ch}
 .steps{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .steps b{font-weight:600;color:var(--ink)}
@@ -122,6 +123,7 @@ aside{position:sticky;top:max(16px,env(safe-area-inset-top,0px))}
   <header>
     <div>
       <h1>숙소 쇼츠 <span>공방</span></h1>
+      <p class="ver">버전 10.24-5</p>
       <p class="sub">숙소 사진을 넣으면 드론·무빙 카메라 느낌의 3D 세로 영상으로 바꾸고, 첫 줄 후킹부터 마지막 저장·댓글 유도까지 들어간 소개 대본을 써 줍니다.</p>
     </div>
     <div class="steps"><b>사진 넣기</b> → <b>카메라 무빙 고르기</b> → <b>소개 대본 만들기</b> → <b>영상 저장</b></div>
@@ -230,6 +232,7 @@ const $=id=>document.getElementById(id);
 const W=720,H=1280;
 const stage=$('stage'),ctx=stage.getContext('2d');
 const MOTIONS={
+  pano:'파노라마 (끝→끝)',
   drone:'드론 접근',
   depth:'3D 깊이',
   orbit:'회전 패닝',
@@ -237,7 +240,8 @@ const MOTIONS={
   pull:'뒤로 빠지기',
   tilt:'아래로 틸트'
 };
-const ORDER=['drone','depth','orbit','rise','pull','tilt'];
+const ORDER=['pano','drone','depth','orbit','rise','pull','tilt'];
+const PORTRAIT_ORDER=['drone','depth','rise','pull','tilt','orbit'];
 let clips=[];      // {img, motion, name, sample}
 let lines=[];      // caption lines
 let scripts=[];    // [{lines,caption}]
@@ -274,7 +278,7 @@ function sampleScene(kind){
   g.fillStyle='rgba(0,0,0,.45)';g.fillRect(24,24,190,52);g.fillStyle='#fff';g.font='600 28px sans-serif';g.fillText('예시 이미지',42,60);
   return c;
 }
-['인피니티 풀','오션뷰 객실','야외 자쿠지'].forEach((n,i)=>clips.push({img:sampleScene(i),motion:ORDER[i],name:n,sample:true}));
+['인피니티 풀','오션뷰 객실','야외 자쿠지'].forEach((n,i)=>clips.push({img:sampleScene(i),motion:PORTRAIT_ORDER[i],name:n,sample:true}));
 
 /* ---------- 사진 추가 ---------- */
 const drop=$('drop'),file=$('file');
@@ -295,7 +299,8 @@ async function addFiles(list){
     const iw=src.naturalWidth,ih=src.naturalHeight,k=Math.min(1,1600/Math.max(iw,ih));
     const img=document.createElement('canvas');img.width=Math.round(iw*k);img.height=Math.round(ih*k);
     img.getContext('2d').drawImage(src,0,0,img.width,img.height);URL.revokeObjectURL(url);
-    clips.push({img,motion:ORDER[clips.length%ORDER.length],name:f.name.replace(/\.[^.]+$/,''),file:f});
+    const wide=iw/ih>1.15; // 가로 사진은 파노라마로 끝에서 끝까지 훑기
+    clips.push({img,motion:wide?'pano':PORTRAIT_ORDER[clips.length%PORTRAIT_ORDER.length],name:f.name.replace(/\.[^.]+$/,''),file:f});
   }
   renderThumbs();drawAt(0);
 }
@@ -337,6 +342,7 @@ const P=()=>parseFloat($('power').value)||0.8;
 function motion(m,p){
   const e=ease(p),g=P();
   switch(m){
+    case 'pano': {const a=Math.min(1,g/0.8);return {s:1.02,nx:(1-2*e)*a,ny:0}}
     case 'drone':return {s:1.04+.6*g*e,nx:-.25*g*e,ny:-.3*g*e};
     case 'orbit':return {s:1.18+.12*g,nx:(.9-1.8*e)*g,r:(-1.4+2.8*e)*g};
     case 'rise': return {s:1.22+.2*g,nx:.15*g*e,ny:(-1+2*e)*g};
