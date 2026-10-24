@@ -199,6 +199,10 @@ aside{position:sticky;top:max(16px,env(safe-area-inset-top,0px))}
           <label>자막 크기
             <select id="capSize"><option value="0.058">보통</option><option value="0.068" selected>크게</option><option value="0.08">아주 크게</option></select>
           </label>
+          <label>카메라 움직임
+            <select id="power"><option value="0.55">보통</option><option value="0.8" selected>강하게</option><option value="1">아주 강하게</option></select>
+          </label>
+          <span></span>
           <label class="check"><input type="checkbox" id="showCap" checked>자막 넣기</label>
           <label class="check"><input type="checkbox" id="showAd" checked>'광고' 표기</label>
         </div>
@@ -301,7 +305,7 @@ function renderThumbs(){
   clips.forEach((c,i)=>{
     const d=document.createElement('div');d.className='th';
     const im=document.createElement('div');im.className='img';
-    const cv=document.createElement('canvas');cv.width=180;cv.height=320;cover(cv.getContext('2d'),c.img,180,320,{s:1,x:0,y:0,r:0});
+    const cv=document.createElement('canvas');cv.width=180;cv.height=320;cover(cv.getContext('2d'),c.img,180,320,{s:1});
     im.append(cv);
     im.insertAdjacentHTML('beforeend',`<span class="idx">${i+1}</span><span class="tools"><button title="앞으로" aria-label="앞으로">◀</button><button title="뒤로" aria-label="뒤로">▶</button><button title="빼기" aria-label="빼기">✕</button></span>`);
     const [bL,bR,bX]=im.querySelectorAll('button');
@@ -318,34 +322,39 @@ function renderThumbs(){
 }
 
 /* ---------- 3D 카메라 무빙 ---------- */
-const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
-function cover(g,img,w,h,{s,x,y,r}){
+const ease=t=>(1-Math.cos(Math.PI*Math.min(1,Math.max(0,t))))/2;
+/* nx, ny: 사진이 화면 밖으로 남는 여백 안에서의 위치(-1 ~ 1).
+   가로로 넓은 사진은 옆 여백이 커서 같은 값이라도 훨씬 크게 훑고 지나간다. */
+function cover(g,img,w,h,{s=1,nx=0,ny=0,r=0}){
   const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
-  const k=Math.max(w/iw,h/ih)*s;
-  g.save();g.translate(w/2+x*w,h/2+y*h);g.rotate(r*Math.PI/180);
-  g.drawImage(img,-iw*k/2,-ih*k/2,iw*k,ih*k);g.restore();
+  const k=Math.max(w/iw,h/ih)*s,dw=iw*k,dh=ih*k;
+  const rot=Math.abs(Math.sin(r*Math.PI/180));
+  const mx=Math.max(0,(dw-w)/2-rot*h/2),my=Math.max(0,(dh-h)/2-rot*w/2);
+  g.save();g.translate(w/2+nx*mx,h/2+ny*my);g.rotate(r*Math.PI/180);
+  g.drawImage(img,-dw/2,-dh/2,dw,dh);g.restore();
 }
+const P=()=>parseFloat($('power').value)||0.8;
 function motion(m,p){
-  const e=ease(p);
+  const e=ease(p),g=P();
   switch(m){
-    case 'drone':return {s:1.06+.34*e,x:0,y:-.03*e,r:0};
-    case 'orbit':return {s:1.24,x:.07-.14*e,y:0,r:-1.6+3.2*e};
-    case 'rise': return {s:1.26,x:0,y:-.09+.18*e,r:0};
-    case 'tilt': return {s:1.26,x:0,y:.09-.18*e,r:0};
-    case 'pull': return {s:1.42-.34*e,x:0,y:.02*e,r:0};
-    default:     return {s:1.1+.06*e,x:0,y:0,r:0};
+    case 'drone':return {s:1.04+.6*g*e,nx:-.25*g*e,ny:-.3*g*e};
+    case 'orbit':return {s:1.18+.12*g,nx:(.9-1.8*e)*g,r:(-1.4+2.8*e)*g};
+    case 'rise': return {s:1.22+.2*g,nx:.15*g*e,ny:(-1+2*e)*g};
+    case 'tilt': return {s:1.22+.2*g,nx:-.15*g*e,ny:(1-2*e)*g};
+    case 'pull': return {s:1.04+.6*g*(1-e),nx:.2*g*(1-e)};
+    default:     return {s:1.08};
   }
 }
 const layer=document.createElement('canvas');layer.width=W;layer.height=H;const lg=layer.getContext('2d');
 function drawClip(g,c,p,alpha){
   g.save();g.globalAlpha=alpha;
   if(c.motion==='depth'){
-    const e=ease(p);
-    cover(g,c.img,W,H,{s:1.12+.05*e,x:.015*e,y:0,r:0});           // 먼 배경: 천천히
+    const e=ease(p),k=P();
+    cover(g,c.img,W,H,{s:1.12+.1*k*e,nx:(.6-1.2*e)*k*.85});                 // 먼 배경: 천천히
     lg.clearRect(0,0,W,H);
-    cover(lg,c.img,W,H,{s:1.14+.26*e,x:-.02*e,y:-.035*e,r:0});     // 가까운 앞쪽: 빠르게
+    cover(lg,c.img,W,H,{s:1.14+.28*k*e,nx:(.6-1.2*e)*k*1.15,ny:-.25*k*e});   // 가까운 앞쪽: 빠르게
     lg.globalCompositeOperation='destination-in';
-    const m=lg.createLinearGradient(0,H*.38,0,H*.72);m.addColorStop(0,'rgba(0,0,0,0)');m.addColorStop(1,'rgba(0,0,0,1)');
+    const m=lg.createLinearGradient(0,H*.3,0,H*.82);m.addColorStop(0,'rgba(0,0,0,0)');m.addColorStop(1,'rgba(0,0,0,1)');
     lg.fillStyle=m;lg.fillRect(0,0,W,H);lg.globalCompositeOperation='source-over';
     g.drawImage(layer,0,0);
   }else cover(g,c.img,W,H,motion(c.motion,p));
@@ -388,7 +397,8 @@ function drawAt(t){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   if(!clips.length){ctx.fillStyle='#8aa';ctx.font='32px sans-serif';ctx.textAlign='center';ctx.fillText('사진을 넣어 주세요',W/2,H/2);return}
   const d=D(),fade=Math.min(.45,d*.2);
-  const i=Math.min(clips.length-1,Math.floor(t/d)),lt=t-i*d;
+  t=Math.max(0,t||0);
+  const i=Math.max(0,Math.min(clips.length-1,Math.floor(t/d))),lt=t-i*d;
   drawClip(ctx,clips[i],lt/d,1);
   if(i<clips.length-1&&lt>d-fade){
     const a=(lt-(d-fade))/fade;drawClip(ctx,clips[i+1],0,a); // 다음 장면을 미리 섞기
@@ -409,31 +419,47 @@ let raf=0,playing=false;
 function run(onEnd,from=0,to=total()){
   cancelAnimationFrame(raf);const st=performance.now();
   const step=now=>{
-    const t=from+(now-st)/1000;
+    const t=from+Math.max(0,(now-st)/1000);
     if(t>=to){drawAt(Math.max(0,to-0.001));updateTime(to);onEnd&&onEnd();return}
     drawAt(t);updateTime(t);raf=requestAnimationFrame(step);
   };raf=requestAnimationFrame(step);
 }
-$('play').onclick=()=>{
-  if(playing){cancelAnimationFrame(raf);playing=false;$('play').textContent='▶ 재생';return}
+const out=$('out');out.muted=true;
+function previewOnCanvas(){
   showStage();playing=true;$('play').textContent='■ 정지';
   run(()=>{playing=false;$('play').textContent='▶ 재생'});
+}
+$('play').onclick=()=>{
+  // 완성 영상이 떠 있으면 그 영상을 재생
+  if(!out.hidden&&videoBlob){
+    if(!out.paused){out.pause();return}
+    out.currentTime=0;
+    out.play().catch(()=>{setRec('이 브라우저에서는 완성 영상 미리보기가 안 돼요. 저장한 뒤 갤러리에서 확인해 주세요. 아래는 미리보기 화면입니다.',true);previewOnCanvas()});
+    return;
+  }
+  if(playing){cancelAnimationFrame(raf);playing=false;$('play').textContent='▶ 재생';return}
+  previewOnCanvas();
 };
+out.addEventListener('play',()=>$('play').textContent='■ 정지');
+out.addEventListener('pause',()=>$('play').textContent='▶ 재생');
+out.addEventListener('ended',()=>$('play').textContent='▶ 재생');
+out.addEventListener('error',()=>{if(!out.hidden&&videoBlob){setRec('이 브라우저에서는 완성 영상 미리보기가 안 돼요. 저장한 뒤 갤러리에서 확인해 주세요.',true);showStage();drawAt(0.6)}});
 function previewClip(i){showStage();playing=false;$('play').textContent='▶ 재생';run(null,i*D(),(i+1)*D())}
 function showStage(){$('out').hidden=true;stage.hidden=false}
-['dur','capSize','showCap','showAd'].forEach(id=>$(id).addEventListener('change',()=>{drawAt(0);updateTime(0)}));
+['dur','capSize','showCap','showAd','power'].forEach(id=>$(id).addEventListener('change',()=>{drawAt(0);updateTime(0)}));
 
 /* ---------- 영상 만들기 (녹화) ---------- */
 let videoBlob=null,videoExt='webm';
 function pickMime(){
-  const c=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  // 720×1280은 저해상도용 Baseline 3.0(42E01E)을 넘어서 일부 폰이 재생을 거부함 → High/Main 4.0 우선
+  const c=['video/mp4;codecs=avc1.640028','video/mp4;codecs=avc1.4D4028','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   return c.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'';
 }
 let recState=null; // {rec, cancelled, watchdog}
 function recReset(){
   cancelAnimationFrame(raf);
   if(recState){clearTimeout(recState.watchdog);clearTimeout(recState.endTimer);clearInterval(recState.ticker);clearInterval(recState.frames)}
-  recState=null;$('rec').textContent='영상 만들기';$('play').disabled=false;$('dur').disabled=false;
+  recState=null;$('rec').textContent='영상 만들기';$('play').disabled=false;$('dur').disabled=false;$('power').disabled=false;
 }
 function recAbort(msg){
   if(!recState)return;
@@ -462,8 +488,9 @@ $('rec').onclick=async()=>{
     const v=$('out');v.src=URL.createObjectURL(videoBlob);v.hidden=false;stage.hidden=true;
     setRec(`완성! ${(videoBlob.size/1048576).toFixed(1)}MB ${videoExt.toUpperCase()} 영상입니다.`);
     $('save').hidden=false;
+    out.play().catch(()=>{});
   };
-  $('rec').textContent='만들기 취소';$('play').disabled=true;$('dur').disabled=true;$('save').hidden=true;
+  $('rec').textContent='만들기 취소';$('play').disabled=true;$('dur').disabled=true;$('power').disabled=true;$('save').hidden=true;
   const T=total(),t0=performance.now();
   const tick=()=>{const left=Math.max(0,T-(performance.now()-t0)/1000);
     setRec(`영상 만드는 중 ${Math.min(99,Math.round((1-left/T)*100))}% · 약 ${Math.ceil(left)}초 남음 — 화면을 켜 두고 이 화면에 머물러 주세요.`)};
