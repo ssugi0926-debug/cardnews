@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E6E8C">
+<title>관광 쇼츠 공방</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 장면 카드 목록(왼쪽) + 세로 폰 미리보기(오른쪽) — 폰에선 하단 탭으로 한 화면씩 */
+:root{
+  --bg:#EEF3F5; --surface:#FFFFFF; --sunk:#E4ECEF; --ink:#0F2733; --muted:#5A6F79;
+  --line:#CFDCE1; --accent:#0E6E8C; --accent-ink:#FFFFFF; --sun:#E0912F; --ok:#2E8B57; --danger:#B4412F;
+  --display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B161B; --surface:#12232B; --sunk:#0E1C22; --ink:#E1ECEF; --muted:#8CA3AC;
+  --line:#223A44; --accent:#3BB3D6; --accent-ink:#04202A; --sun:#F2B160; --ok:#5CC98A; --danger:#F08A73; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B161B; --surface:#12232B; --sunk:#0E1C22; --ink:#E1ECEF; --muted:#8CA3AC;
+  --line:#223A44; --accent:#3BB3D6; --accent-ink:#04202A; --sun:#F2B160; --ok:#5CC98A; --danger:#F08A73; color-scheme:dark}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+[hidden]{display:none!important}
+img,video,canvas{max-width:100%}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:18px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,5vw,42px);line-height:1.05;margin:0}
+h1 span{color:var(--accent)}
+.ver{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.cost{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cost b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+h2{font-size:13px;letter-spacing:.08em;color:var(--muted);margin:0 0 6px;font-weight:600;display:flex;align-items:center;gap:8px}
+h2 .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+select,input[type=text],input[type=password],textarea{font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;line-height:1.6}
+select:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:600;border-radius:10px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.small{padding:6px 10px;font-size:13px}
+.status{font-size:13px;color:var(--muted);min-height:1.3em}
+.status.err{color:var(--danger)}
+.status.ok{color:var(--ok)}
+.keybox{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--sunk)}
+.keybox summary{cursor:pointer;font-weight:600;font-size:14px}
+.keybox input{background:var(--surface)}
+.keybox a{color:var(--accent)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.fields{grid-template-columns:1fr}}
+.wide{grid-column:1/-1}
+
+/* 장면 카드 */
+.scenes{display:flex;flex-direction:column;gap:14px}
+.scene{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+@media (max-width:480px){.scene{grid-template-columns:96px minmax(0,1fr)}.sbody .two{grid-template-columns:minmax(0,1fr) 76px}.sbody select{padding:8px 4px;font-size:14px}}
+.media{position:relative;aspect-ratio:9/16;border-radius:10px;overflow:hidden;background:var(--sunk);display:grid;place-items:center;cursor:pointer}
+.media img,.media video{width:100%;height:100%;object-fit:cover;display:block}
+.media .ph{font-size:12px;color:var(--muted);text-align:center;padding:6px}
+.media .no{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 7px;border-radius:20px}
+.media .badge{position:absolute;left:6px;bottom:6px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px;color:#fff}
+.badge.done{background:var(--ok)}
+.badge.gen{background:var(--sun)}
+.badge.err{background:var(--danger)}
+.sbody{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sbody .two{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px}
+.sbody textarea{min-height:58px;font-size:14px}
+.bar{height:4px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* 미리보기 */
+aside{position:sticky;top:max(16px,env(safe-area-inset-top,0px))}
+.phone{background:#000;border-radius:28px;padding:10px;max-width:320px;margin:0 auto}
+.phone canvas,.phone video{display:block;width:100%;aspect-ratio:9/16;border-radius:20px;background:#111}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.check{display:flex;align-items:center;gap:7px;font-size:13px}
+#script{min-height:190px}
+.tabs{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.tabs button{font:inherit;font-size:13px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.next{display:none}
+.tabbar{display:none}
+@media (max-width:900px){
+  body{padding-block:14px calc(84px + env(safe-area-inset-bottom,0px))}
+  header .cost{width:100%}
+  body[data-view="scenes"] #pScript,body[data-view="scenes"] aside,
+  body[data-view="script"] #pScenes,body[data-view="script"] aside,
+  body[data-view="final"] #pScenes,body[data-view="final"] #pScript{display:none}
+  aside{position:static}
+  .next{display:block;width:100%;margin-top:14px}
+  .btn{padding:12px 14px}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
+    padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+  .tabbar button{flex:1;font:inherit;font-size:12px;font-weight:600;background:none;border:0;color:var(--muted);padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+  .tabbar svg{width:22px;height:22px}
+  .tabbar button[aria-current="page"]{color:var(--accent)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>관광 쇼츠 <span>공방</span></h1>
+      <p class="ver">버전 11.14-1 · AI 영상: Gemini Omni Flash</p>
+    </div>
+    <div class="cost" id="costBox">이번 기기에서 쓴 영상 비용 <b id="costSum">0원</b> (추정)</div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel" id="pScenes" aria-labelledby="h1s">
+        <h2 id="h1s"><span class="n">1</span>장면 만들기</h2>
+        <p class="hint">장면마다 사진 한 장을 넣고 카메라 움직임을 고른 뒤 <b>AI 영상 만들기</b>를 누르세요. 사진 속 장소 그대로 실제 촬영한 것 같은 영상이 만들어집니다. 쇼츠 하나는 보통 <b>3장면 × 6초</b>면 충분해요.</p>
+
+        <details class="keybox" id="keyBox">
+          <summary>AI 설정 (제미나이 API 키)</summary>
+          <p class="hint" style="margin:10px 0">카드뉴스 앱에 넣어 둔 키가 있으면 자동으로 씁니다. 영상 생성은 <b>결제가 켜진(유료 등급) 키</b>에서만 됩니다. 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
+          <div class="fields">
+            <label class="f wide">제미나이 API 키
+              <span class="row" style="flex-wrap:nowrap"><input type="password" id="apiKey" placeholder="AIza로 시작하는 키" autocomplete="off"><button class="btn small" id="showKey" type="button">보기</button></span>
+            </label>
+            <label class="f">영상 모델<input type="text" id="vidModel" autocomplete="off"></label>
+            <label class="f">글 모델<input type="text" id="txtModel" autocomplete="off"></label>
+            <div class="row wide"><button class="btn small" id="saveKey" type="button">저장</button><span class="status" id="keyNote"></span></div>
+          </div>
+        </details>
+
+        <div class="scenes" id="scenes" style="margin-top:14px"></div>
+        <div class="addrow" style="margin-top:12px">
+          <button class="btn" id="addScene">+ 장면 추가</button>
+          <button class="btn primary" id="genAll">빈 장면 모두 만들기</button>
+        </div>
+        <p class="status" id="allStatus"></p>
+        <input type="file" id="file" accept="image/*" hidden>
+        <button class="btn primary next" data-go="script">다음: 대본·자막</button>
+      </section>
+
+      <section class="panel" id="pScript" aria-labelledby="h2s">
+        <h2 id="h2s"><span class="n">2</span>대본 · 자막</h2>
+        <p class="hint">한 줄이 자막 한 장면입니다. 영상 길이에 맞춰 고르게 나눠 들어가요.</p>
+        <div class="fields">
+          <label class="f">장소 이름<input type="text" id="place" placeholder="예: 해운대 OO호텔 스파"></label>
+          <label class="f">지역<input type="text" id="region" placeholder="예: 부산"></label>
+          <label class="f wide">특징 (쉼표로 구분)<input type="text" id="features" placeholder="예: 지하 2,003m 온천수, 바다뷰 노천탕, 숙박 안 해도 이용 가능"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="genScript">AI 대본 쓰기</button>
+          <span class="status" id="scriptStatus"></span>
+        </div>
+        <div class="tabs" id="tabs" role="tablist"></div>
+        <label class="f">자막 대본<textarea id="script"></textarea></label>
+        <label class="f" style="margin-top:12px">업로드 캡션 · 해시태그<textarea id="caption" style="min-height:110px"></textarea></label>
+        <div class="row" style="margin-top:8px"><button class="btn small" id="copyCap">캡션 복사</button><span class="status" id="copyNote"></span></div>
+        <button class="btn primary next" data-go="final">다음: 쇼츠 완성</button>
+      </section>
+    </div>
+
+    <aside>
+      <section class="panel" aria-labelledby="h3s">
+        <h2 id="h3s"><span class="n">3</span>쇼츠 완성</h2>
+        <p class="hint">만든 장면을 순서대로 이어 붙이고 자막과 '광고' 표기를 넣어 영상 한 편으로 저장합니다.</p>
+        <div class="phone">
+          <canvas id="stage" width="720" height="1280" aria-label="완성 미리보기"></canvas>
+          <video id="out" playsinline controls hidden></video>
+        </div>
+        <div class="opts">
+          <label class="f">자막 크기
+            <select id="capSize"><option value="0.058">보통</option><option value="0.068" selected>크게</option><option value="0.08">아주 크게</option></select>
+          </label>
+          <label class="f">자막 위치
+            <select id="capPos"><option value="0.5">가운데</option><option value="0.72" selected>아래쪽</option></select>
+          </label>
+          <label class="check"><input type="checkbox" id="showCap" checked>자막 넣기</label>
+          <label class="check"><input type="checkbox" id="showAd" checked>'광고' 표기</label>
+          <label class="check wide"><input type="checkbox" id="useAudio" checked>AI가 만든 현장음 넣기</label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="build" style="flex:1">쇼츠 영상 만들기</button>
+          <button class="btn" id="save" hidden style="flex:1">영상 저장</button>
+        </div>
+        <p class="status" id="buildStatus"></p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="작업 단계">
+  <button data-go="scenes" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="m10.5 9 4 3-4 3z"/></svg>장면</button>
+  <button data-go="script"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>대본</button>
+  <button data-go="final"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v13H4z"/><path d="m4 7 3-4h10l3 4"/><path d="M10 11v5l4-2.5z"/></svg>완성</button>
+</nav>
+
+<script>
+const $=id=>document.getElementById(id);
+const W=720,H=1280,KRW=1400;
+const PRICE_PER_SEC=0.10; // Gemini Omni Flash 720p 공식 환산가(약 $0.10/초)
+
+/* ---------- 카메라 움직임 ---------- */
+const MOVES={
+  drone:{ko:'드론 전진',en:'Smooth cinematic aerial drone shot slowly flying forward toward the place, gentle descent, perfectly stable gimbal.'},
+  fpv:{ko:'FPV 비행',en:'Smooth FPV drone flight gliding low through the space, passing close to the foreground and revealing the view beyond, continuous single take.'},
+  orbit:{ko:'돌아가기',en:'Slow orbiting camera move arcing around the main subject, strong natural parallax between foreground and background.'},
+  crane:{ko:'크레인 상승',en:'Camera rises upward from a low angle to a high wide reveal of the whole place.'},
+  walk:{ko:'걸어 들어감',en:'Steady gimbal walk-in shot at eye level moving forward through the space, like a traveler entering for the first time.'},
+  pan:{ko:'파노라마',en:'Slow horizontal panning shot sweeping across the wide view from left to right.'},
+  alive:{ko:'장면만 움직임',en:'Locked-off camera. Bring the scene naturally to life: water rippling, steam rising, leaves and curtains moving in the breeze, soft light changes.'}
+};
+const MOVE_KEYS=Object.keys(MOVES);
+const REALISM='Photorealistic real-life travel footage shot on a cinema camera. Keep the exact location, architecture, layout, materials and colors from the reference image. No text, no logos, no subtitles, no watermark. Natural lighting, no warping or melting. Natural ambient sound of the place only, no music, no voice-over.';
+
+/* ---------- 저장소 (영상·사진은 IndexedDB, 설정은 localStorage) ---------- */
+const ls={get(k){try{return localStorage.getItem(k)||''}catch{return''}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+let dbp=null;
+function idb(){
+  if(dbp)return dbp;
+  dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('tourShorts',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});
+  return dbp;
+}
+async function dbPut(k,v){try{const d=await idb();await new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}catch{}}
+async function dbGet(k){try{const d=await idb();return await new Promise((res,rej)=>{const r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}catch{return undefined}}
+
+/* ---------- API 키 ---------- */
+function cardnewsKey(){try{return (JSON.parse(ls.get('cns_settings')||'{}').apiKey||'').trim()}catch{return''}}
+function apiKey(){return ls.get('tour_apiKey').trim()||ls.get('sss_apiKey').trim()||cardnewsKey()}
+const vidModel=()=>ls.get('tour_vidModel').trim()||'gemini-omni-1.1-flash';
+const txtModel=()=>ls.get('tour_txtModel').trim()||ls.get('sss_model').trim()||'gemini-3.8-flash';
+$('apiKey').value=ls.get('tour_apiKey');$('vidModel').value=vidModel();$('txtModel').value=txtModel();
+function keyHint(){
+  $('keyNote').textContent=ls.get('tour_apiKey')?'':apiKey()?'다른 앱(카드뉴스·숙소 쇼츠)에 넣어 둔 키를 쓰고 있어요.':'키를 넣어 주세요.';
+  if(!apiKey())$('keyBox').open=true;
+}
+keyHint();
+$('saveKey').onclick=()=>{ls.set('tour_apiKey',$('apiKey').value.trim());ls.set('tour_vidModel',$('vidModel').value.trim());ls.set('tour_txtModel',$('txtModel').value.trim());keyHint();$('keyNote').textContent=apiKey()?'저장했습니다.':'키가 비어 있어요.'};
+$('showKey').onclick=()=>{const i=$('apiKey');i.type=i.type==='password'?'text':'password';$('showKey').textContent=i.type==='password'?'보기':'숨기기'};
+
+const API='https://generativelanguage.googleapis.com/v1beta';
+async function api(path,opt={}){
+  const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json','x-goog-api-key':apiKey(),...(opt.headers||{})}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(j.error?.message||('HTTP '+r.status));e.status=r.status;throw e}
+  return j;
+}
+function friendly(e){
+  const m=(e&&e.message)||'';
+  if(e.status===401||e.status===403||/API key|permission|PERMISSION/i.test(m))return '키가 맞지 않거나 이 키에 영상 권한이 없어요. 결제(유료 등급)가 켜진 키인지 확인해 주세요.';
+  if(/billing|paid|free tier|FREE_TIER/i.test(m))return '영상 생성은 결제가 켜진 키에서만 돼요. AI Studio에서 결제(유료 등급)를 켜 주세요.';
+  if(e.status===404)return '영상 모델 이름을 찾을 수 없어요. AI 설정에서 모델 이름을 확인해 주세요.';
+  if(e.status===429)return '요청이 많거나 한도를 넘었어요. 1~2분 뒤 다시 눌러 주세요.';
+  if(/safety|blocked|policy|person/i.test(m))return '구글 안전 기준에 걸렸어요(사람 얼굴이 크게 나온 사진 등). 다른 사진으로 해 보세요.';
+  if(e.name==='TypeError')return '인터넷 연결을 확인해 주세요.';
+  return '영상을 만들지 못했어요: '+m.slice(0,140);
+}
+
+/* ---------- 장면 ---------- */
+let scenes=[];
+const newScene=i=>({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),img:null,move:['drone','walk','alive','orbit','crane','fpv','pan'][i%7],note:'',dur:6,status:'empty',msg:'',iid:'',started:0,clip:null,cost:0});
+let saveT;
+function persist(){clearTimeout(saveT);saveT=setTimeout(()=>dbPut('scenes',scenes.map(s=>({...s,url:undefined,thumb:undefined}))),300)}
+let pickFor=null;
+$('file').onchange=async()=>{
+  const f=$('file').files[0];$('file').value='';
+  if(!f||pickFor===null)return;
+  const s=scenes.find(x=>x.id===pickFor);if(!s)return;
+  s.img=await shrink(f);s.status=s.clip?'done':'empty';s.msg='';
+  render();persist();
+};
+async function shrink(file){
+  const url=URL.createObjectURL(file);
+  const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+  const k=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight));
+  const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+  return await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+}
+const urls=new Map();
+function urlOf(blob){if(!blob)return'';if(!urls.has(blob))urls.set(blob,URL.createObjectURL(blob));return urls.get(blob)}
+const won=d=>Math.round(d*KRW/10)*10;
+const fmt=n=>n.toLocaleString('ko-KR')+'원';
+function costOf(s){return won(s.dur*PRICE_PER_SEC)}
+function render(){
+  const box=$('scenes');box.innerHTML='';
+  scenes.forEach((s,i)=>{
+    const el=document.createElement('div');el.className='scene';
+    const busy=s.status==='gen';
+    const badge=s.status==='done'?'<span class="badge done">영상 완성</span>':busy?'<span class="badge gen">만드는 중</span>':s.status==='err'?'<span class="badge err">실패</span>':'';
+    const media=s.clip?`<video src="${urlOf(s.clip)}" muted loop playsinline autoplay></video>`:s.img?`<img src="${urlOf(s.img)}" alt="${i+1}번 장면 사진">`:'<span class="ph">눌러서<br>사진 넣기</span>';
+    el.innerHTML=`
+      <div class="media" role="button" tabindex="0" aria-label="${i+1}번 장면 사진 바꾸기">${media}<span class="no">${i+1}</span>${badge}</div>
+      <div class="sbody">
+        <div class="two">
+          <label class="f">카메라 움직임<select id="mv${s.id}">${MOVE_KEYS.map(k=>`<option value="${k}"${k===s.move?' selected':''}>${MOVES[k].ko}</option>`).join('')}</select></label>
+          <label class="f">길이<select id="du${s.id}">${[4,6,8,10].map(d=>`<option value="${d}"${d===s.dur?' selected':''}>${d}초</option>`).join('')}</select></label>
+        </div>
+        <label class="f">원하는 장면 (선택)<textarea id="nt${s.id}" placeholder="예: 노천탕에서 김이 피어오르고 바다 위로 해가 진다">${esc(s.note)}</textarea></label>
+        ${busy?'<div class="bar"><i style="width:'+prog(s)+'%"></i></div>':''}
+        <div class="row">
+          <button class="btn ${s.clip?'':'primary'} small" data-act="gen" ${busy||!s.img?'disabled':''}>${busy?'만드는 중…':s.clip?'다시 만들기':'AI 영상 만들기'} · 약 ${fmt(costOf(s))}</button>
+          ${s.clip?'<button class="btn small" data-act="dl">이 장면 저장</button>':''}
+          <button class="btn small" data-act="up" ${i===0?'disabled':''} aria-label="위로">▲</button>
+          <button class="btn small" data-act="del" aria-label="장면 삭제">삭제</button>
+        </div>
+        <span class="status ${s.status==='err'?'err':s.status==='done'?'ok':''}">${esc(s.msg)}</span>
+      </div>`;
+    const m=el.querySelector('.media');
+    const pick=()=>{if(busy)return;pickFor=s.id;$('file').click()};
+    m.onclick=pick;m.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick()}};
+    el.querySelector('#mv'+s.id).onchange=e=>{s.move=e.target.value;persist()};
+    el.querySelector('#du'+s.id).onchange=e=>{s.dur=+e.target.value;persist();render()};
+    el.querySelector('#nt'+s.id).oninput=e=>{s.note=e.target.value;persist()};
+    el.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
+      const a=b.dataset.act;
+      if(a==='gen')generate(s);
+      if(a==='dl')saveBlob(s.clip,`장면${i+1}.mp4`);
+      if(a==='up'&&i>0){[scenes[i-1],scenes[i]]=[scenes[i],scenes[i-1]];render();persist()}
+      if(a==='del'){
+        if(busy&&!b.dataset.sure){b.dataset.sure=1;b.textContent='만드는 중이에요. 한 번 더 누르면 삭제';return}
+        if(s.clip&&!b.dataset.sure){b.dataset.sure=1;b.textContent='완성 영상도 지워져요. 한 번 더 누르면 삭제';return}
+        scenes.splice(i,1);render();persist();
+      }
+    });
+    box.append(el);
+  });
+  $('costSum').textContent=fmt(+ls.get('tour_spent')||0);
+}
+function soft(){const a=document.activeElement;if(a&&$('scenes').contains(a)&&a.tagName!=='BUTTON')return;render()}
+function prog(s){if(!s.started)return 5;return Math.min(95,Math.round((Date.now()-s.started)/1000/90*100))}
+function esc(t){return String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+$('addScene').onclick=()=>{scenes.push(newScene(scenes.length));render();persist();pickFor=scenes.at(-1).id;$('file').click()};
+
+/* ---------- AI 영상 만들기 (Gemini Omni Flash · Interactions API) ---------- */
+const b64=blob=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(blob)});
+function promptFor(s){
+  const note=s.note.trim();
+  return `${MOVES[s.move].en} ${note?'Scene details (in Korean, follow them): '+note+'. ':''}${REALISM} Vertical 9:16 framing for a short-form travel video.`;
+}
+function bodyFor(s,img64,shape){
+  const fmt={type:'video',aspect_ratio:'9:16',resolution:'720p',duration:String(s.dur)};
+  return {model:vidModel(),background:true,
+    input:[{type:'text',text:promptFor(s)},{type:'image',data:img64,mime_type:'image/jpeg'}],
+    response_format:shape==='array'?[fmt]:fmt,
+    generation_config:{video_config:{task:'image_to_video'}}};
+}
+function findVideo(o,depth=0){
+  if(!o||typeof o!=='object'||depth>8)return null;
+  const mt=o.mime_type||o.mimeType||'';
+  if((o.type==='video'||/^video\//.test(mt))&&(o.data||o.uri))return o;
+  for(const v of Array.isArray(o)?o:Object.values(o)){const f=findVideo(v,depth+1);if(f)return f}
+  return null;
+}
+function stateOf(j){return String(j.status||j.state||'').toLowerCase()}
+async function generate(s){
+  if(!apiKey()){$('keyBox').open=true;s.msg='먼저 AI 설정에 제미나이 API 키를 넣어 주세요.';s.status='err';render();return}
+  if(!s.img)return;
+  s.status='gen';s.msg='요청 보내는 중…';s.started=Date.now();render();
+  try{
+    const img64=await b64(s.img);
+    let j;
+    try{j=await api('/interactions',{method:'POST',body:JSON.stringify(bodyFor(s,img64,'object'))})}
+    catch(e){if(e.status===400&&/response_format|repeated|list|array/i.test(e.message))j=await api('/interactions',{method:'POST',body:JSON.stringify(bodyFor(s,img64,'array'))});else throw e}
+    s.iid=j.id||j.name||'';persist();
+    await finish(s,j);
+  }catch(e){s.status='err';s.msg=friendly(e);s.iid='';render();persist()}
+}
+async function finish(s,j){
+  const t0=Date.now();
+  while(true){
+    const v=findVideo(j);
+    if(v){await takeVideo(s,v);return}
+    const st=stateOf(j);
+    if(/fail|cancel|error/.test(st)||j.error)throw new Error(j.error?.message||'생성 실패('+st+')');
+    if(/complet|succe|done/.test(st)&&!v)throw new Error('영상이 응답에 없어요');
+    if(!s.iid)throw new Error('작업 번호를 받지 못했어요');
+    if(Date.now()-t0>8*60*1000)throw new Error('8분이 지나도 끝나지 않았어요');
+    s.msg=`AI가 영상을 만드는 중… ${Math.round((Date.now()-s.started)/1000)}초 (보통 30초~2분)`;
+    soft();
+    await new Promise(r=>setTimeout(r,5000));
+    j=await api('/interactions/'+encodeURIComponent(s.iid));
+  }
+}
+async function takeVideo(s,v){
+  let blob;
+  if(v.data){
+    const bin=atob(v.data);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    blob=new Blob([u],{type:v.mime_type||v.mimeType||'video/mp4'});
+  }else{
+    const r=await fetch(v.uri,{headers:{'x-goog-api-key':apiKey()}});
+    if(!r.ok)throw new Error('영상 받기 실패 HTTP '+r.status);
+    blob=await r.blob();
+  }
+  s.clip=blob;s.status='done';s.iid='';s.cost=costOf(s);
+  ls.set('tour_spent',String((+ls.get('tour_spent')||0)+s.cost));
+  s.msg=`완성! ${Math.round((Date.now()-s.started)/1000)}초 걸렸어요.`;
+  render();persist();
+}
+$('genAll').onclick=async()=>{
+  const todo=scenes.filter(s=>s.img&&!s.clip&&s.status!=='gen');
+  if(!todo.length){$('allStatus').textContent=scenes.some(s=>!s.img)?'사진이 없는 장면이 있어요. 사진부터 넣어 주세요.':'만들 장면이 없어요.';return}
+  const total=todo.reduce((a,s)=>a+costOf(s),0);
+  const b=$('genAll');
+  if(!b.dataset.sure){b.dataset.sure=1;b.textContent=`${todo.length}장면 · 약 ${fmt(total)} — 한 번 더 누르면 시작`;setTimeout(()=>{delete b.dataset.sure;b.textContent='빈 장면 모두 만들기'},6000);return}
+  delete b.dataset.sure;b.textContent='빈 장면 모두 만들기';
+  $('allStatus').textContent=`${todo.length}장면을 동시에 만들고 있어요. 이 화면을 켜 두세요.`;
+  await Promise.all(todo.map(s=>generate(s)));
+  $('allStatus').textContent='끝났어요. 실패한 장면은 다시 만들기를 눌러 주세요.';
+};
+
+/* ---------- 저장 ---------- */
+async function saveBlob(blob,name){
+  const isPhone=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if(isPhone&&navigator.canShare){
+    const f=new File([blob],name,{type:blob.type||'video/mp4'});
+    if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return true}catch(e){if(e.name==='AbortError')return false}}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();
+  return true;
+}
+
+/* ---------- 대본 ---------- */
+let scripts=[],active=0;
+const defaultScript=()=>{
+  const p=$('place').value.trim()||'이곳',r=$('region').value.trim()||'국내',f=$('features').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+  return {type:'기본',lines:[`상위 1%만 아는 ${r} 여행지`,`${p}인데요.`,...(f.length?f.slice(0,3).map(x=>`${x}까지 다 누릴 수 있어요.`):['풍경부터 분위기가 남달라요.']),'다음 여행 때 꼭 가 보세요.','저장해 두고 댓글 남겨 주세요.'],
+    caption:`${p} 정보 궁금하신 분들은 댓글 남겨 주세요.\n📌 저장해 두고 다음 여행 때 참고하세요.\n\n#${r.replace(/\s/g,'')}여행 #국내여행 #여행지추천 #여행쇼츠 #가볼만한곳`};
+};
+function showScripts(list){
+  scripts=list;active=0;const t=$('tabs');t.innerHTML='';
+  list.forEach((s,i)=>{const b=document.createElement('button');b.role='tab';b.textContent=s.type||('대본 '+(i+1));b.setAttribute('aria-selected',i===0);
+    b.onclick=()=>{scripts[active].lines=$('script').value.split('\n').filter(x=>x.trim());active=i;[...t.children].forEach((x,k)=>x.setAttribute('aria-selected',k===i));fill()};t.append(b)});
+  fill();
+}
+function fill(){$('script').value=scripts[active].lines.join('\n');$('caption').value=scripts[active].caption||'';saveText()}
+function saveText(){ls.set('tour_text',JSON.stringify({place:$('place').value,region:$('region').value,features:$('features').value,script:$('script').value,caption:$('caption').value}))}
+['place','region','features','script','caption'].forEach(id=>$(id).addEventListener('input',saveText));
+$('genScript').onclick=async()=>{
+  const st=$('scriptStatus');st.className='status';
+  if(!apiKey()){showScripts([defaultScript()]);st.textContent='API 키가 없어 기본 문장으로 만들었어요.';return}
+  const btn=$('genScript');btn.disabled=true;st.textContent='사진을 보고 대본을 쓰는 중…';
+  try{
+    const imgs=await Promise.all(scenes.filter(s=>s.img).slice(0,6).map(s=>b64(s.img)));
+    const n=Math.max(5,Math.min(8,scenes.length+3));
+    const prompt=`너는 조회수 높은 한국어 "관광·여행지 소개 쇼츠" 대본 작가다. 15~20초 세로 영상의 자막 대본을 3가지 버전으로 써라.
+
+잘 터진 영상(조회수 38만, 19초) 예: 제목 "상위 1% 우리나라 고급 온천". 흐름 = ① 희소성 후킹(상위 1%, 손꼽히는, 숨겨진) → ② 어떤 곳인지 한 줄 → ③ 놀라운 숫자·사실(지하 2,003m 온천수 등) → ④ 시설과 누구와 가기 좋은지 → ⑤ 하이라이트 장면(바다뷰 노천탕) → ⑥ 실용 정보(숙박 안 해도 이용 가능, 입장료) → ⑦ 저장·댓글 유도.
+
+버전: 1. 희소성 후킹형 2. 감탄·감성형 3. 정보 요약형
+규칙: 각 버전 ${n}줄 안팎, 한 줄은 자막 한 장면(최대 30자). 사진과 아래 정보에 없는 숫자·가격·사실은 지어내지 않는다. 이모지는 쓰지 않는다.
+caption: 업로드 캡션 3~5문장(마지막은 "정보 궁금하신 분들은 댓글 남겨 주세요." / "저장해 두고 다음 여행 때 참고하세요.") + 빈 줄 + 해시태그 5~7개.
+
+장소 정보(비어 있으면 사진에서 보이는 것만):
+- 이름: ${$('place').value.trim()||'(미입력)'}
+- 지역: ${$('region').value.trim()||'(미입력)'}
+- 특징: ${$('features').value.trim()||'(미입력)'}
+${imgs.length?`- 첨부 사진 ${imgs.length}장은 영상에 나오는 순서다.`:''}
+
+JSON만 출력: {"scripts":[{"type":"희소성 후킹형","lines":["..."]},{"type":"감탄·감성형","lines":[...]},{"type":"정보 요약형","lines":[...]}],"caption":"..."}`;
+    const parts=[{text:prompt},...imgs.map(d=>({inline_data:{mime_type:'image/jpeg',data:d}}))];
+    const j=await api(`/models/${encodeURIComponent(txtModel())}:generateContent`,{method:'POST',body:JSON.stringify({contents:[{parts}],generationConfig:{responseMimeType:'application/json',temperature:.9}})});
+    const txt=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+    const m=txt.match(/\{[\s\S]*\}/);const res=JSON.parse(m?m[0]:txt);
+    const list=(res.scripts||[]).map(s=>({type:String(s.type||''),lines:(s.lines||[]).map(String).filter(Boolean),caption:String(res.caption||'')})).filter(s=>s.lines.length);
+    if(!list.length)throw new Error('빈 대본');
+    showScripts(list);st.textContent='완성! 마음에 드는 대본을 고르고 고쳐서 쓰세요.';st.className='status ok';
+  }catch(e){st.textContent=e.status?friendly(e):'대본을 받지 못해 기본 문장으로 만들었어요. 다시 눌러 보세요.';st.className='status err';showScripts([defaultScript()])}
+  finally{btn.disabled=false}
+};
+async function copy(t){try{await navigator.clipboard.writeText(t);$('copyNote').textContent='복사했습니다.'}catch{$('copyNote').textContent='글자를 길게 눌러 복사해 주세요.'}}
+$('copyCap').onclick=()=>copy($('caption').value);
+
+/* ---------- 쇼츠 완성 (장면 이어붙이기 + 자막 + 현장음) ---------- */
+const stage=$('stage'),ctx=stage.getContext('2d');
+function coverDraw(src,sw,sh){
+  const k=Math.max(W/sw,H/sh),dw=sw*k,dh=sh*k;ctx.drawImage(src,(W-dw)/2,(H-dh)/2,dw,dh);
+}
+function wrap(text,max){
+  const out=[];let cur='';
+  for(const w of text.split(' ')){const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width<=max)cur=t;
+    else if(!cur){let s='';for(const ch of w){if(ctx.measureText(s+ch).width>max){out.push(s);s=ch}else s+=ch}cur=s}
+    else{out.push(cur);cur=w}}
+  if(cur)out.push(cur);return out.slice(0,3);
+}
+function overlay(t,T){
+  const lines=$('script').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if($('showCap').checked&&lines.length&&T>0){
+    const text=lines[Math.min(lines.length-1,Math.floor(t/(T/lines.length)))];
+    const size=Math.round(W*parseFloat($('capSize').value));
+    ctx.font=`${size}px "Black Han Sans", sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    const ls_=wrap(text,W*.86),lh=size*1.22,y0=H*parseFloat($('capPos').value)-(ls_.length-1)*lh/2;
+    ls_.forEach((l,i)=>{const y=y0+i*lh;ctx.save();ctx.shadowColor='rgba(0,0,0,.85)';ctx.shadowBlur=size*.6;ctx.lineJoin='round';
+      ctx.lineWidth=size*.14;ctx.strokeStyle='rgba(0,0,0,.75)';ctx.strokeText(l,W/2,y);ctx.fillStyle='#fff';ctx.fillText(l,W/2,y);ctx.restore()});
+  }
+  if($('showAd').checked){
+    ctx.save();ctx.font='600 26px "IBM Plex Sans KR", sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    const w=86,h=42,x=W-w-28,y=54;ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,10):ctx.rect(x,y,w,h);ctx.fill();
+    ctx.fillStyle='#fff';ctx.fillText('광고',x+w/2,y+h/2+1);ctx.restore();
+  }
+}
+async function poster(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  const s=scenes.find(x=>x.img);
+  if(s){const im=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=urlOf(s.img)});if(im)coverDraw(im,im.naturalWidth,im.naturalHeight)}
+  else{ctx.fillStyle='#7f98a2';ctx.font='32px sans-serif';ctx.textAlign='center';ctx.fillText('장면을 먼저 만들어 주세요',W/2,H/2)}
+  overlay(0,1);
+}
+function pickMime(){
+  const c=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.4D4028,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return c.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'';
+}
+const player=document.createElement('video');player.playsInline=true;player.preload='auto';player.crossOrigin='anonymous';
+let actx=null,asrc=null,adest=null,again=null,building=null,finalBlob=null,finalExt='mp4';
+function setB(m,cls=''){const s=$('buildStatus');s.textContent=m;s.className='status '+cls}
+async function loadMeta(blob){
+  player.src=urlOf(blob);
+  await new Promise((res,rej)=>{player.onloadedmetadata=res;player.onerror=()=>rej(new Error('장면 영상을 열 수 없어요'));player.load()});
+  return isFinite(player.duration)&&player.duration>0?player.duration:0;
+}
+$('build').onclick=async()=>{
+  if(building){building.cancel=true;return}
+  const clips=scenes.filter(s=>s.clip);
+  if(!clips.length){setB('완성된 장면이 없어요. 장면 탭에서 AI 영상부터 만들어 주세요.','err');return}
+  if(!window.MediaRecorder||!stage.captureStream){setB('이 브라우저는 영상 만들기를 지원하지 않아요. 크롬·삼성 인터넷·사파리 최신 버전으로 열어 주세요.','err');return}
+  await document.fonts.ready;
+  const job=building={cancel:false};
+  $('out').hidden=true;stage.hidden=false;$('save').hidden=true;$('build').textContent='만들기 취소';
+  try{
+    const durs=[];for(const c of clips)durs.push(await loadMeta(c.clip)||c.dur);
+    const T=durs.reduce((a,b)=>a+b,0);
+    const stream=stage.captureStream(30);
+    const useAudio=$('useAudio').checked;
+    if(useAudio){
+      try{
+        actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume();
+        if(!asrc){asrc=actx.createMediaElementSource(player);again=actx.createGain();adest=actx.createMediaStreamDestination();asrc.connect(again);again.connect(adest)}
+        adest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+      }catch{}
+    }
+    player.muted=!useAudio||!asrc;
+    const mime=pickMime();finalExt=mime.includes('mp4')?'mp4':'webm';
+    const rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:{});
+    const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    const stopped=new Promise(r=>rec.onstop=r);
+    rec.start(250);
+    let offset=0;
+    for(let i=0;i<clips.length;i++){
+      if(job.cancel)break;
+      await loadMeta(clips[i].clip);player.currentTime=0;
+      await player.play().catch(()=>{player.muted=true;return player.play()});
+      await new Promise(res=>{
+        const end=offset+durs[i];
+        const iv=setInterval(()=>{
+          const t=Math.min(end,offset+player.currentTime);
+          ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+          if(player.videoWidth)coverDraw(player,player.videoWidth,player.videoHeight);
+          overlay(t,T);
+          setB(`쇼츠 만드는 중 ${Math.min(99,Math.round(t/T*100))}% · 화면을 켜 두세요.`);
+          if(player.ended||t>=end-0.04||job.cancel||player.error){clearInterval(iv);res()}
+        },1000/30);
+        setTimeout(()=>{clearInterval(iv);res()},(durs[i]+3)*1000);
+      });
+      player.pause();offset+=durs[i];
+    }
+    setTimeout(()=>{try{rec.stop()}catch{}},150);
+    await Promise.race([stopped,new Promise(r=>setTimeout(r,8000))]);
+    if(job.cancel){setB('취소했어요.','err');poster();return}
+    finalBlob=new Blob(chunks,{type:mime||'video/webm'});
+    if(!finalBlob.size)throw new Error('빈 영상');
+    const o=$('out');o.src=URL.createObjectURL(finalBlob);o.hidden=false;stage.hidden=true;o.play().catch(()=>{});
+    $('save').hidden=false;setB(`완성! ${Math.round(T)}초 · ${(finalBlob.size/1048576).toFixed(1)}MB ${finalExt.toUpperCase()}`,'ok');
+  }catch(e){setB('쇼츠를 만들지 못했어요. 화면을 켜 둔 채 다시 눌러 주세요. ('+(e.message||'')+')','err');poster()}
+  finally{building=null;$('build').textContent='쇼츠 영상 만들기';player.pause()}
+};
+$('save').onclick=async()=>{
+  if(!finalBlob)return;
+  const name=(($('place').value.trim()||'관광쇼츠').replace(/[\\/:*?"<>|]/g,''))+'_쇼츠.'+finalExt;
+  const ok=await saveBlob(finalBlob,name);
+  setB(ok?'저장했어요. 폰은 공유 창에서 "동영상 저장"을 누르면 갤러리에 들어가요.':'저장을 취소했어요.',ok?'ok':'');
+};
+['capSize','capPos','showCap','showAd'].forEach(id=>$(id).addEventListener('change',()=>{if(!building){$('out').hidden=true;stage.hidden=false;poster()}}));
+
+/* ---------- 폰 하단 탭 ---------- */
+function go(v){
+  document.body.dataset.view=v;
+  document.querySelectorAll('.tabbar button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===v?'page':'false'));
+  if(matchMedia('(max-width:900px)').matches)scrollTo({top:0});
+  if(v==='final'&&!building&&$('out').hidden)poster();
+}
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+document.body.dataset.view='scenes';
+
+/* ---------- 시작: 저장된 장면 불러오기, 만들던 영상 이어서 받기 ---------- */
+(async()=>{
+  try{const t=JSON.parse(ls.get('tour_text')||'{}');['place','region','features','script','caption'].forEach(k=>{if(t[k])$(k).value=t[k]})}catch{}
+  if(!$('script').value){const d=defaultScript();$('script').value=d.lines.join('\n');$('caption').value=d.caption}
+  const saved=await dbGet('scenes');
+  scenes=Array.isArray(saved)&&saved.length?saved:[newScene(0),newScene(1),newScene(2)];
+  render();poster();
+  for(const s of scenes){
+    if(s.status==='gen'){
+      if(s.iid){s.msg='만들던 영상을 이어서 받는 중…';render();
+        api('/interactions/'+encodeURIComponent(s.iid)).then(j=>finish(s,j)).catch(e=>{s.status='err';s.msg=friendly(e);s.iid='';render();persist()});}
+      else{s.status=s.clip?'done':'empty';s.msg='';}
+    }
+  }
+  render();
+  setInterval(()=>{if(scenes.some(s=>s.status==='gen'))document.querySelectorAll('.bar i').forEach((b,k)=>{const s=scenes.filter(x=>x.status==='gen')[k];if(s)b.style.width=prog(s)+'%'})},1000);
+})();
+</script>
+</body>
+</html>
